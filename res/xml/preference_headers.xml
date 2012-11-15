@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<preference-headers xmlns:android="http://schemas.android.com/apk/res/android">
+    
+    <header 
+        android:fragment="com.nickilous.alertification.AlertificationPreferenceActivity$SettingsFragment"
+        android:title="Wifi Direct"
+        android:summary="No Device" >
+        <!-- key/value pairs can be included as arguments for the fragment. -->
+        <extra android:name="settings" android:value="wifi_direct" />
+    </header>
+</preference-headers>

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" >
+    <SwitchPreference android:summaryOn="on" android:key="wifi_direct_enable" android:title="Wifi Direct" android:summaryOff="off"/>
+
+</PreferenceScreen>
