@@ -7,5 +7,7 @@
     <string name="title_activity_alertification_preference">AlertificationPreferenceActivity</string>
     <string name="start_service">Start</string>
     <string name="stop_service">Stop</string>
+    <string name="status_label">Status:</string>
+    <string name="thread_status">Thread Status</string>
 
 </resources>

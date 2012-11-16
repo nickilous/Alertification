@@ -15,40 +15,51 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.TextView;
 import android.widget.Toast;
 
 public class MainActivity extends Activity {
+    // Debugging
+    private static final String TAG = "MainActivity";
+    private static final boolean D = true;
+
     Messenger mService = null;
     boolean mIsBound;
     final Messenger mMessenger = new Messenger(new IncomingHandler());
+    TextView threadStatus;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        Log.i(TAG, "<-----OnCreate()----->");
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        CheckIfServiceIsRunning();
+
+        threadStatus = (TextView) findViewById(R.id.threadStatus);
 
     }
 
     @Override
     public void onResume() {
+        Log.i(TAG, "<-----OnResume()----->");
         super.onResume();
         CheckIfServiceIsRunning();
     }
 
     @Override
     public void onPause() {
+        Log.i(TAG, "<-----OnPause()----->");
         super.onPause();
 
     }
 
     @Override
     protected void onDestroy() {
+        Log.i(TAG, "<-----OnDestroy----->");
         super.onDestroy();
         try {
             doUnbindService();
         } catch (Throwable t) {
-            Log.e("MainActivity", "Failed to unbind from the service", t);
+            Log.e(TAG, "Failed to unbind from the service", t);
         }
     }
 
@@ -77,6 +88,7 @@ public class MainActivity extends Activity {
         Intent stopServerIntent = new Intent();
         stopServerIntent.setAction("com.nickilous.STOP_SERVICE");
         startService(stopServerIntent);
+        doUnbindService();
     }
 
     public void startService(View v) {
@@ -85,9 +97,11 @@ public class MainActivity extends Activity {
         Intent startServerIntent = new Intent();
         startServerIntent.setAction("com.nickilous.START_SERVICE");
         startService(startServerIntent);
+        doBindService();
     }
 
     private void CheckIfServiceIsRunning() {
+        Log.i(TAG, "<-----CheckIfServiceIsRunning()----->");
         // If the service is running when the activity starts, we want to
         // automatically bind to it.
         if (AlertificationService.isRunning()) {
@@ -96,23 +110,25 @@ public class MainActivity extends Activity {
     }
 
     void doBindService() {
+        Log.i(TAG, "<-----doBindService()----->");
         // Establish a connection with the service. We use an explicit
         // class name because there is no reason to be able to let other
         // applications replace our component.
-        bindService(new Intent(this, MessengerService.class), mConnection,
+        bindService(new Intent(this, AlertificationService.class), mConnection,
                 Context.BIND_AUTO_CREATE);
         mIsBound = true;
-        mCallbackText.setText("Binding.");
+        threadStatus.setText("Binding.");
     }
 
     void doUnbindService() {
+        Log.i(TAG, "<-----doUnbindService()----->");
         if (mIsBound) {
             // If we have received the service, and hence registered with
             // it, then now is the time to unregister.
             if (mService != null) {
                 try {
                     Message msg = Message.obtain(null,
-                            MessengerService.MSG_UNREGISTER_CLIENT);
+                            AlertificationService.MSG_UNREGISTER_CLIENT);
                     msg.replyTo = mMessenger;
                     mService.send(msg);
                 } catch (RemoteException e) {
@@ -124,7 +140,7 @@ public class MainActivity extends Activity {
             // Detach our existing connection.
             unbindService(mConnection);
             mIsBound = false;
-            mCallbackText.setText("Unbinding.");
+            threadStatus.setText("Unbinding.");
         }
     }
 
@@ -134,9 +150,12 @@ public class MainActivity extends Activity {
     class IncomingHandler extends Handler {
         @Override
         public void handleMessage(Message msg) {
+            Log.i(TAG, "<-----handleMessage()----->");
             switch (msg.what) {
-            case MessengerService.MSG_SET_VALUE:
-                mCallbackText.setText("Received from service: " + msg.arg1);
+            case AlertificationService.MSG_SET_THREAD_STATUS:
+                setThreadStatus("Received from service: "
+                        + msg.getData().getString("str1"));
+
                 break;
             default:
                 super.handleMessage(msg);
@@ -149,24 +168,25 @@ public class MainActivity extends Activity {
      */
     private ServiceConnection mConnection = new ServiceConnection() {
         public void onServiceConnected(ComponentName className, IBinder service) {
+            Log.i(TAG, "<-----OnServiceConnected()----->");
             // This is called when the connection with the service has been
             // established, giving us the service object we can use to
             // interact with the service. We are communicating with our
             // service through an IDL interface, so get a client-side
             // representation of that from the raw service object.
             mService = new Messenger(service);
-            mCallbackText.setText("Attached.");
+            threadStatus.setText("Attached.");
 
             // We want to monitor the service for as long as we are
             // connected to it.
             try {
                 Message msg = Message.obtain(null,
-                        MessengerService.MSG_REGISTER_CLIENT);
+                        AlertificationService.MSG_REGISTER_CLIENT);
                 msg.replyTo = mMessenger;
                 mService.send(msg);
 
                 // Give it some value as an example.
-                msg = Message.obtain(null, MessengerService.MSG_SET_VALUE,
+                msg = Message.obtain(null, AlertificationService.MSG_SET_VALUE,
                         this.hashCode(), 0);
                 mService.send(msg);
             } catch (RemoteException e) {
@@ -176,20 +196,20 @@ public class MainActivity extends Activity {
                 // so there is no need to do anything here.
             }
 
-            // As part of the sample, tell the user what happened.
-            Toast.makeText(Binding.this, R.string.remote_service_connected,
-                    Toast.LENGTH_SHORT).show();
         }
 
         public void onServiceDisconnected(ComponentName className) {
+            Log.i(TAG, "<-----onServiceDisconnected()----->");
             // This is called when the connection with the service has been
             // unexpectedly disconnected -- that is, its process crashed.
             mService = null;
-            mCallbackText.setText("Disconnected.");
+            threadStatus.setText("Disconnected.");
 
-            // As part of the sample, tell the user what happened.
-            Toast.makeText(Binding.this, R.string.remote_service_disconnected,
-                    Toast.LENGTH_SHORT).show();
         }
     };
+
+    public void setThreadStatus(String string) {
+        threadStatus.setText(string);
+
+    }
 }

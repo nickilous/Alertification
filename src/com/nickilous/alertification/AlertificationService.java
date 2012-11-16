@@ -24,9 +24,11 @@ import android.preference.PreferenceManager;
 import android.util.Log;
 
 public class AlertificationService extends Service {
+    // Debugging
+    private static final String TAG = "AlertificationService";
+    private static final boolean D = true;
 
-    private SharedPreferences sharedPref = PreferenceManager
-            .getDefaultSharedPreferences(this);;
+    private SharedPreferences sharedPref;
     // default ip
     public static String SERVERIP = "10.0.2.15";
 
@@ -53,10 +55,13 @@ public class AlertificationService extends Service {
                                                                 // registered
                                                                 // clients.
     int mValue = 0; // Holds last value set by a client.
+
     static final int MSG_REGISTER_CLIENT = 1;
     static final int MSG_UNREGISTER_CLIENT = 2;
     static final int MSG_SET_INT_VALUE = 3;
     static final int MSG_SET_STRING_VALUE = 4;
+    static final int MSG_SET_THREAD_STATUS = 5;
+    static final int MSG_SET_VALUE = 6;
 
     public AlertificationService() {
 
@@ -64,10 +69,9 @@ public class AlertificationService extends Service {
 
     @Override
     public void onCreate() {
+        sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
+        isRunning = true;
 
-        if (sharedPref.getBoolean("wifi_direct_enabled", false)) {
-
-        }
     }
 
     @Override
@@ -108,6 +112,7 @@ public class AlertificationService extends Service {
      * Handler of incoming messages from clients.
      */
     class IncomingHandler extends Handler {
+
         @Override
         public void handleMessage(Message msg) {
             switch (msg.what) {
@@ -137,18 +142,13 @@ public class AlertificationService extends Service {
         }
     }
 
-    private void sendMessageToUI(int intvaluetosend) {
+    private void sendMessageToUI(int messageType, String valuetosend) {
         for (int i = mClients.size() - 1; i >= 0; i--) {
             try {
-                // Send data as an Integer
-                mClients.get(i).send(
-                        Message.obtain(null, MSG_SET_INT_VALUE, intvaluetosend,
-                                0));
-
                 // Send data as a String
                 Bundle b = new Bundle();
-                b.putString("str1", "ab" + intvaluetosend + "cd");
-                Message msg = Message.obtain(null, MSG_SET_STRING_VALUE);
+                b.putString("str1", valuetosend);
+                Message msg = Message.obtain(null, messageType);
                 msg.setData(b);
                 mClients.get(i).send(msg);
 
@@ -168,23 +168,18 @@ public class AlertificationService extends Service {
     public class WifiServerThread implements Runnable {
 
         public void run() {
+            Log.i(TAG, "Running WifiServerThread");
             try {
                 if (SERVERIP != null) {
-                    handler.post(new Runnable() {
-                        public void run() {
-                            serverStatus
-                                    .setText("Listening on IP: " + SERVERIP);
-                        }
-                    });
+
+                    sendMessageToUI(MSG_SET_THREAD_STATUS, "Listening on IP: "
+                            + SERVERIP);
+
                     serverSocket = new ServerSocket(SERVERPORT);
                     while (true) {
                         // listen for incoming clients
                         Socket client = serverSocket.accept();
-                        handler.post(new Runnable() {
-                            public void run() {
-                                serverStatus.setText("Connected.");
-                            }
-                        });
+                        sendMessageToUI(MSG_SET_THREAD_STATUS, "Connected.");
 
                         try {
                             BufferedReader in = new BufferedReader(
@@ -193,38 +188,26 @@ public class AlertificationService extends Service {
                             String line = null;
                             while ((line = in.readLine()) != null) {
                                 Log.d("ServerActivity", line);
-                                handler.post(new Runnable() {
-                                    public void run() {
-                                        // do whatever you want to the front end
-                                        // this is where you can be creative
-                                    }
-                                });
+
+                                // do whatever you want to the front end
+                                // this is where you can be creative
+
                             }
                             break;
                         } catch (Exception e) {
-                            handler.post(new Runnable() {
-                                public void run() {
-                                    serverStatus
-                                            .setText("Oops. Connection interrupted. Please reconnect your phones.");
-                                }
-                            });
+                            sendMessageToUI(MSG_SET_THREAD_STATUS,
+                                    "Oops. Connection interrupted. Please reconnect your phones.");
                             e.printStackTrace();
                         }
                     }
                 } else {
-                    handler.post(new Runnable() {
-                        public void run() {
-                            serverStatus
-                                    .setText("Couldn't detect internet connection.");
-                        }
-                    });
+                    sendMessageToUI(MSG_SET_THREAD_STATUS,
+                            "Couldn't detect internet connection.");
+
                 }
             } catch (Exception e) {
-                handler.post(new Runnable() {
-                    public void run() {
-                        serverStatus.setText("Error");
-                    }
-                });
+                sendMessageToUI(MSG_SET_THREAD_STATUS, "Error");
+
                 e.printStackTrace();
             }
         }

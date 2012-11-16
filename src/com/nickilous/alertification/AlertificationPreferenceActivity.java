@@ -1,7 +1,5 @@
 package com.nickilous.alertification;
 
-import java.util.List;
-
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.os.Bundle;
@@ -15,10 +13,12 @@ public class AlertificationPreferenceActivity extends PreferenceActivity
     private boolean wifiDirectEnabled;
     private SharedPreferences sharedPref;
 
+    @SuppressWarnings("deprecation")
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
+        addPreferencesFromResource(R.xml.alertification_preferences);
 
     }
 
@@ -34,10 +34,10 @@ public class AlertificationPreferenceActivity extends PreferenceActivity
 
     }
 
-    @Override
+    /**@Override
     public void onBuildHeaders(List<Header> target) {
-        loadHeadersFromResource(R.xml.preference_headers, target);
-    }
+        // loadHeadersFromResource(R.xml.preference_headers, target);
+    }**/
 
     public static class SettingsFragment extends PreferenceFragment {
         @Override
@@ -46,7 +46,7 @@ public class AlertificationPreferenceActivity extends PreferenceActivity
 
             String settings = getArguments().getString("settings");
             if ("wifi_direct".equals(settings)) {
-                addPreferencesFromResource(R.xml.wifi_direct_preference);
+                // addPreferencesFromResource(R.xml.wifi_direct_preference);
             } else if ("sync".equals(settings)) {
 
             }
@@ -55,9 +55,9 @@ public class AlertificationPreferenceActivity extends PreferenceActivity
 
     public void onSharedPreferenceChanged(SharedPreferences sharedPreferences,
             String key) {
-        if (key.equals("wifi_direct_enabled")) {
-
-        }
+        // if (key.equals("wifi_direct_enabled")) {
+        //
+        // }
 
     }
 

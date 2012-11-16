@@ -3,7 +3,12 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent" >
 
-    
+    <TextView
+        android:id="@+id/statusLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/status_label"
+        android:textAppearance="?android:attr/textAppearanceLarge" />
 
     <LinearLayout
         android:id="@+id/button_linear_layout"
@@ -29,5 +34,14 @@
             android:text="@string/stop_service" />
 
     </LinearLayout>
+
+    <TextView
+        android:id="@+id/threadStatus"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:layout_below="@+id/statusLabel"
+        android:hint="@string/thread_status"
+        android:textAppearance="?android:attr/textAppearanceMedium" />
 
 </RelativeLayout>
