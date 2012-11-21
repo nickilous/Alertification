@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" >
     <SwitchPreference android:summaryOn="on" android:key="server_enabled" android:title="Server" android:summaryOff="off"/>
+    <EditTextPreference android:key="server_ip_address" android:title="Server Ip Address"/>
 
 </PreferenceScreen>

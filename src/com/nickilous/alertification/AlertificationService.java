@@ -32,7 +32,11 @@ public class AlertificationService extends Service {
     private static final boolean D = true;
     // Preference Settings
     private SharedPreferences sharedPref;
-    private boolean serverEnabled;
+    private boolean clientEnabled = false;
+    private boolean serverEnabled = false;
+
+    private boolean serverShouldRun = false;
+    private boolean clientShouldRun = false;
 
     // default ip
     public static String SERVERIP = "10.0.2.15";
@@ -69,18 +73,27 @@ public class AlertificationService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        Log.i("MyService", "Received start id " + startId + ": " + intent);
+        Log.i(TAG, "Received start id " + startId + ": " + intent);
 
         serverEnabled = sharedPref.getBoolean(
                 AlertificationPreferenceActivity.SERVER_ENABLED, false);
 
-        if (serverEnabled) {
-            SERVERIP = getLocalIpAddress();
-            Thread wifiServerThread = new Thread(new WifiServerThread());
-            wifiServerThread.start();
-        } else {
-            Thread wifiClientThread = new Thread(new WifiClientThread());
-            wifiClientThread.start();
+        if (intent.getAction().equals(MainActivity.START_SERVICE)) {
+            if (serverEnabled) {
+                SERVERIP = getLocalIpAddress();
+                Thread wifiServerThread = new Thread(new WifiServerThread());
+                serverShouldRun = true;
+                wifiServerThread.start();
+            } else {
+                Thread wifiClientThread = new Thread(new WifiClientThread());
+                clientShouldRun = true;
+                wifiClientThread.start();
+
+            }
+        } else if (intent.getAction().equals(MainActivity.STOP_SERVICE)) {
+            serverShouldRun = false;
+            clientShouldRun = false;
+            stopSelf();
         }
         return START_STICKY;
     }
@@ -96,12 +109,8 @@ public class AlertificationService extends Service {
         }
         super.onDestroy();
 
-        Log.i("MyService", "Service Stopped.");
+        Log.i(TAG, "Service Stopped.");
         isRunning = false;
-    }
-
-    public void setIsWifiP2pEnabled(boolean b) {
-
     }
 
     @Override
@@ -177,7 +186,7 @@ public class AlertificationService extends Service {
                             + SERVERIP);
 
                     serverSocket = new ServerSocket(SERVERPORT);
-                    while (true) {
+                    while (serverShouldRun) {
                         // listen for incoming clients
                         Socket client = serverSocket.accept();
                         sendMessageToUI(MSG_SET_THREAD_STATUS, "Connected.");
@@ -218,7 +227,7 @@ public class AlertificationService extends Service {
 
         public void run() {
             try {
-                InetAddress serverAddr = InetAddress.getByName(serverIpAddress);
+                InetAddress serverAddr = InetAddress.getByName(SERVERIP);
                 Log.d(TAG, "C: Connecting...");
                 Socket socket = new Socket(serverAddr,
                         AlertificationService.SERVERPORT);
@@ -260,7 +269,7 @@ public class AlertificationService extends Service {
                 }
             }
         } catch (SocketException ex) {
-            Log.e("ServerActivity", ex.toString());
+            Log.e(TAG, ex.toString());
         }
         return null;
     }

@@ -22,6 +22,8 @@ public class MainActivity extends Activity {
     // Debugging
     private static final String TAG = "MainActivity";
     private static final boolean D = true;
+    public static final String START_SERVICE = "com.nickilous.START_SERVICE";
+    public static final String STOP_SERVICE = "com.nickilous.STOP_SERVICE";
 
     Messenger mService = null;
     boolean mIsBound;
@@ -86,7 +88,7 @@ public class MainActivity extends Activity {
         Toast.makeText(getApplicationContext(), "Stopping Server",
                 Toast.LENGTH_LONG).show();
         Intent stopServerIntent = new Intent();
-        stopServerIntent.setAction("com.nickilous.STOP_SERVICE");
+        stopServerIntent.setAction(STOP_SERVICE);
         startService(stopServerIntent);
         doUnbindService();
     }
@@ -95,7 +97,7 @@ public class MainActivity extends Activity {
         Toast.makeText(getApplicationContext(), "Starting Server",
                 Toast.LENGTH_LONG).show();
         Intent startServerIntent = new Intent();
-        startServerIntent.setAction("com.nickilous.START_SERVICE");
+        startServerIntent.setAction(START_SERVICE);
         startService(startServerIntent);
         doBindService();
     }

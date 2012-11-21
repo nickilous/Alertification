@@ -10,6 +10,8 @@ import android.preference.PreferenceManager;
 public class AlertificationPreferenceActivity extends PreferenceActivity
         implements OnSharedPreferenceChangeListener {
     public static final String SERVER_ENABLED = "server_enabled";
+    public static final String SERVER_IP_ADDRESS = "server_ip_address";
+
     private boolean wifiDirectEnabled;
     private SharedPreferences sharedPref;
 

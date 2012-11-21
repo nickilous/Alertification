@@ -6,11 +6,14 @@
     <uses-sdk
         android:minSdkVersion="15"
         android:targetSdkVersion="15" />
-    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE"/>
-    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
-    <uses-permission android:name="android.permission.INTERNET"/>
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
-    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE"/>
+
+    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+    <uses-permission android:name="android.permission.READ_SMS"/>
+    <uses-permission android:name="android.permission.RECEIVE_SMS"/>
 
     <application
         android:icon="@drawable/ic_launcher"
@@ -30,22 +33,20 @@
             android:label="@string/title_activity_alertification_preference" >
         </activity>
 
-        <receiver
-            android:name=".WifiDirectBroadcastReceiver"
-            android:enabled="true"
-            android:exported="true" >
-        </receiver>
+        
 
         <service
             android:name=".AlertificationService"
             android:enabled="true"
             android:exported="true" >
             <intent-filter>
-                <action android:name="com.nickilous.START_SERVICE"/>
-                <action android:name="com.nickilous.STOP_SERVICE"/>
+                <action android:name="com.nickilous.START_SERVICE" />
+                <action android:name="com.nickilous.STOP_SERVICE" />
+                <action android:name="android.provider.Telephony.SMS_RECEIVED" />
             </intent-filter>
-            
         </service>
+
+        
     </application>
 
 </manifest>
