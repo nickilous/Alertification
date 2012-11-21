@@ -1,8 +1,11 @@
 package com.nickilous.alertification;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.ServerSocket;
@@ -27,33 +30,23 @@ public class AlertificationService extends Service {
     // Debugging
     private static final String TAG = "AlertificationService";
     private static final boolean D = true;
-
+    // Preference Settings
     private SharedPreferences sharedPref;
+    private boolean serverEnabled;
+
     // default ip
     public static String SERVERIP = "10.0.2.15";
 
     // designate a port
     public static final int SERVERPORT = 8080;
 
-    final Messenger mMessenger = new Messenger(new IncomingHandler()); // Target
-                                                                       // we
-                                                                       // publish
-                                                                       // for
-                                                                       // clients
-                                                                       // to
-                                                                       // send
-                                                                       // messages
-                                                                       // to
-                                                                       // IncomingHandler.
+    final Messenger mMessenger = new Messenger(new IncomingHandler());
 
     private ServerSocket serverSocket;
     private static boolean isRunning = false;
+    private static boolean isConnected = false;
 
-    ArrayList<Messenger> mClients = new ArrayList<Messenger>(); // Keeps track
-                                                                // of all
-                                                                // current
-                                                                // registered
-                                                                // clients.
+    ArrayList<Messenger> mClients = new ArrayList<Messenger>();
     int mValue = 0; // Holds last value set by a client.
 
     static final int MSG_REGISTER_CLIENT = 1;
@@ -77,10 +70,18 @@ public class AlertificationService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.i("MyService", "Received start id " + startId + ": " + intent);
-        SERVERIP = getLocalIpAddress();
 
-        Thread fst = new Thread(new WifiServerThread());
-        fst.start();
+        serverEnabled = sharedPref.getBoolean(
+                AlertificationPreferenceActivity.SERVER_ENABLED, false);
+
+        if (serverEnabled) {
+            SERVERIP = getLocalIpAddress();
+            Thread wifiServerThread = new Thread(new WifiServerThread());
+            wifiServerThread.start();
+        } else {
+            Thread wifiClientThread = new Thread(new WifiClientThread());
+            wifiClientThread.start();
+        }
         return START_STICKY;
     }
 
@@ -213,6 +214,37 @@ public class AlertificationService extends Service {
         }
     }
 
+    public class WifiClientThread implements Runnable {
+
+        public void run() {
+            try {
+                InetAddress serverAddr = InetAddress.getByName(serverIpAddress);
+                Log.d(TAG, "C: Connecting...");
+                Socket socket = new Socket(serverAddr,
+                        AlertificationService.SERVERPORT);
+                isConnected = true;
+                while (isConnected) {
+                    try {
+                        Log.d(TAG, "C: Sending command.");
+                        PrintWriter out = new PrintWriter(
+                                new BufferedWriter(new OutputStreamWriter(
+                                        socket.getOutputStream())), true);
+                        // where you issue the commands
+                        out.println("Hey Server!");
+                        Log.d(TAG, "C: Sent.");
+                    } catch (Exception e) {
+                        Log.e(TAG, "S: Error", e);
+                    }
+                }
+                socket.close();
+                Log.d(TAG, "C: Closed.");
+            } catch (Exception e) {
+                Log.e(TAG, "C: Error", e);
+                isConnected = false;
+            }
+        }
+    }
+
     // gets the ip address of your phone's network
     private String getLocalIpAddress() {
         try {
@@ -223,7 +255,7 @@ public class AlertificationService extends Service {
                         .getInetAddresses(); enumIpAddr.hasMoreElements();) {
                     InetAddress inetAddress = enumIpAddr.nextElement();
                     if (!inetAddress.isLoopbackAddress()) {
-                        return inetAddress.getHostAddress().toString();
+                        return inetAddress.getHostAddress();
                     }
                 }
             }
