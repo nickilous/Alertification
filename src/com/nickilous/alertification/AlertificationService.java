@@ -11,6 +11,7 @@ import java.net.NetworkInterface;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Enumeration;
 
@@ -24,6 +25,7 @@ import android.os.Message;
 import android.os.Messenger;
 import android.os.RemoteException;
 import android.preference.PreferenceManager;
+import android.telephony.SmsMessage;
 import android.util.Log;
 
 public class AlertificationService extends Service {
@@ -52,6 +54,7 @@ public class AlertificationService extends Service {
 
     ArrayList<Messenger> mClients = new ArrayList<Messenger>();
     int mValue = 0; // Holds last value set by a client.
+    private Socket clientSocket;
 
     static final int MSG_REGISTER_CLIENT = 1;
     static final int MSG_UNREGISTER_CLIENT = 2;
@@ -80,20 +83,41 @@ public class AlertificationService extends Service {
 
         if (intent.getAction().equals(MainActivity.START_SERVICE)) {
             if (serverEnabled) {
+                Log.i(TAG, "Enabling Server");
                 SERVERIP = getLocalIpAddress();
                 Thread wifiServerThread = new Thread(new WifiServerThread());
                 serverShouldRun = true;
                 wifiServerThread.start();
             } else {
-                Thread wifiClientThread = new Thread(new WifiClientThread());
-                clientShouldRun = true;
-                wifiClientThread.start();
+                Log.i(TAG, "Enabling Client");
+                InetAddress serverAddr;
+                try {
+                    serverAddr = InetAddress.getByName(SERVERIP);
+                    Log.d(TAG, "C: Connecting...");
+                    try {
+                        clientSocket = new Socket(serverAddr,
+                                AlertificationService.SERVERPORT);
+
+                    } catch (IOException e) {
+                        // TODO Auto-generated catch block
+                        e.printStackTrace();
+                    }
+                } catch (UnknownHostException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }
+
+                isConnected = true;
 
             }
         } else if (intent.getAction().equals(MainActivity.STOP_SERVICE)) {
             serverShouldRun = false;
-            clientShouldRun = false;
             stopSelf();
+        } else if (intent.getAction().equals(
+                "android.provider.Telephony.SMS_RECEIVED")
+                && isConnected) {
+            sendMessageToServer(handleSMSMessage(intent));
+
         }
         return START_STICKY;
     }
@@ -104,12 +128,14 @@ public class AlertificationService extends Service {
         try {
             // make sure you close the socket upon exiting
             serverSocket.close();
+            clientSocket.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
         super.onDestroy();
 
         Log.i(TAG, "Service Stopped.");
+        isConnected = false;
         isRunning = false;
     }
 
@@ -171,6 +197,49 @@ public class AlertificationService extends Service {
         }
     }
 
+    private void sendMessageToServer(String message) {
+        Log.i(TAG, "<-----sendMessageToServer()----->");
+        PrintWriter out;
+        try {
+            out = new PrintWriter(new BufferedWriter(new OutputStreamWriter(
+                    clientSocket.getOutputStream())), true);
+            // where you issue the commands
+            Log.i(TAG, "Sending message: " + message);
+            out.println(message);
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+
+        Log.i(TAG, "message sent");
+
+    }
+
+    private String handleSMSMessage(Intent intent) {
+        // Get the SMS map from Intent
+        Bundle extras = intent.getExtras();
+
+        String messages = "";
+
+        if (extras != null) {
+            // Get received SMS array
+            Object[] smsExtra = (Object[]) extras.get("pdus");
+
+            for (Object element : smsExtra) {
+                SmsMessage sms = SmsMessage.createFromPdu((byte[]) element);
+
+                String body = sms.getMessageBody().toString();
+                String address = sms.getOriginatingAddress();
+
+                messages += "SMS from " + address + " :\n";
+                messages += body + "\n";
+
+            }
+
+        }
+        return messages;
+    }
+
     public static boolean isRunning() {
         return isRunning;
     }
@@ -219,37 +288,6 @@ public class AlertificationService extends Service {
                 sendMessageToUI(MSG_SET_THREAD_STATUS, "Error");
 
                 e.printStackTrace();
-            }
-        }
-    }
-
-    public class WifiClientThread implements Runnable {
-
-        public void run() {
-            try {
-                InetAddress serverAddr = InetAddress.getByName(SERVERIP);
-                Log.d(TAG, "C: Connecting...");
-                Socket socket = new Socket(serverAddr,
-                        AlertificationService.SERVERPORT);
-                isConnected = true;
-                while (isConnected) {
-                    try {
-                        Log.d(TAG, "C: Sending command.");
-                        PrintWriter out = new PrintWriter(
-                                new BufferedWriter(new OutputStreamWriter(
-                                        socket.getOutputStream())), true);
-                        // where you issue the commands
-                        out.println("Hey Server!");
-                        Log.d(TAG, "C: Sent.");
-                    } catch (Exception e) {
-                        Log.e(TAG, "S: Error", e);
-                    }
-                }
-                socket.close();
-                Log.d(TAG, "C: Closed.");
-            } catch (Exception e) {
-                Log.e(TAG, "C: Error", e);
-                isConnected = false;
             }
         }
     }
