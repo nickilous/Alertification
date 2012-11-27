@@ -6,17 +6,15 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.os.Bundle;
-import android.os.Handler;
 import android.os.IBinder;
-import android.os.Message;
-import android.os.Messenger;
-import android.os.RemoteException;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import com.nickilous.alertification.AlertificationService.LocalBinder;
 
 public class MainActivity extends Activity {
     // Debugging
@@ -25,10 +23,11 @@ public class MainActivity extends Activity {
     public static final String START_SERVICE = "com.nickilous.START_SERVICE";
     public static final String STOP_SERVICE = "com.nickilous.STOP_SERVICE";
 
-    Messenger mService = null;
+    AlertificationService mService = null;
     boolean mIsBound;
-    final Messenger mMessenger = new Messenger(new IncomingHandler());
-    TextView threadStatus;
+
+    private static TextView threadStatus;
+    private TextView serviceConnectionStatus;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -37,6 +36,7 @@ public class MainActivity extends Activity {
         setContentView(R.layout.activity_main);
 
         threadStatus = (TextView) findViewById(R.id.threadStatus);
+        serviceConnectionStatus = (TextView) findViewById(R.id.serviceConnectionStatus);
 
     }
 
@@ -119,49 +119,16 @@ public class MainActivity extends Activity {
         bindService(new Intent(this, AlertificationService.class), mConnection,
                 Context.BIND_AUTO_CREATE);
         mIsBound = true;
-        threadStatus.setText("Binding.");
+        serviceConnectionStatus.setText("Binding.");
     }
 
     void doUnbindService() {
         Log.i(TAG, "<-----doUnbindService()----->");
         if (mIsBound) {
-            // If we have received the service, and hence registered with
-            // it, then now is the time to unregister.
-            if (mService != null) {
-                try {
-                    Message msg = Message.obtain(null,
-                            AlertificationService.MSG_UNREGISTER_CLIENT);
-                    msg.replyTo = mMessenger;
-                    mService.send(msg);
-                } catch (RemoteException e) {
-                    // There is nothing special we need to do if the service
-                    // has crashed.
-                }
-            }
-
             // Detach our existing connection.
             unbindService(mConnection);
             mIsBound = false;
-            threadStatus.setText("Unbinding.");
-        }
-    }
-
-    /**
-     * Handler of incoming messages from service.
-     */
-    class IncomingHandler extends Handler {
-        @Override
-        public void handleMessage(Message msg) {
-            Log.i(TAG, "<-----handleMessage()----->");
-            switch (msg.what) {
-            case AlertificationService.MSG_SET_THREAD_STATUS:
-                setThreadStatus("Received from service: "
-                        + msg.getData().getString("str1"));
-
-                break;
-            default:
-                super.handleMessage(msg);
-            }
+            serviceConnectionStatus.setText("Unbinding.");
         }
     }
 
@@ -176,27 +143,10 @@ public class MainActivity extends Activity {
             // interact with the service. We are communicating with our
             // service through an IDL interface, so get a client-side
             // representation of that from the raw service object.
-            mService = new Messenger(service);
-            threadStatus.setText("Attached.");
-
-            // We want to monitor the service for as long as we are
-            // connected to it.
-            try {
-                Message msg = Message.obtain(null,
-                        AlertificationService.MSG_REGISTER_CLIENT);
-                msg.replyTo = mMessenger;
-                mService.send(msg);
-
-                // Give it some value as an example.
-                msg = Message.obtain(null, AlertificationService.MSG_SET_VALUE,
-                        this.hashCode(), 0);
-                mService.send(msg);
-            } catch (RemoteException e) {
-                // In this case the service has crashed before we could even
-                // do anything with it; we can count on soon being
-                // disconnected (and then reconnected if it can be restarted)
-                // so there is no need to do anything here.
-            }
+            // We've bound to LocalService, cast the IBinder and get
+            // LocalService instance
+            LocalBinder binder = (LocalBinder) service;
+            mService = binder.getService();
 
         }
 
@@ -205,7 +155,7 @@ public class MainActivity extends Activity {
             // This is called when the connection with the service has been
             // unexpectedly disconnected -- that is, its process crashed.
             mService = null;
-            threadStatus.setText("Disconnected.");
+            serviceConnectionStatus.setText("Disconnected.");
 
         }
     };
@@ -214,4 +164,9 @@ public class MainActivity extends Activity {
         threadStatus.setText(string);
 
     }
+
+    public void setServiceConnectionStatus(String string) {
+        serviceConnectionStatus.setText(string);
+    }
+
 }

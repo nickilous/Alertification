@@ -9,5 +9,8 @@
     <string name="stop_service">Stop</string>
     <string name="status_label">Status:</string>
     <string name="thread_status">Thread Status</string>
+    <string name="service_connection_label">Service Connection:</string>
+    <string name="thread_status_label">Thread Status</string>
+    <string name="service_connection_hint">Service Connection</string>
 
 </resources>
