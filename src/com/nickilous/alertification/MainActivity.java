@@ -5,12 +5,15 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.SharedPreferences;
+import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
 import android.os.Messenger;
 import android.os.RemoteException;
+import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -18,18 +21,31 @@ import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
-public class MainActivity extends Activity {
+public class MainActivity extends Activity implements
+        OnSharedPreferenceChangeListener {
     // Debugging
     private static final String TAG = "MainActivity";
     private static final boolean D = true;
+
+    // Static final String Identifiers
     public static final String START_SERVICE = "com.nickilous.START_SERVICE";
     public static final String STOP_SERVICE = "com.nickilous.STOP_SERVICE";
+    public static final String SERVER_IP = "SERVER_IP";
+    public static final String SERVER_PORT = "SERVER_PORT";
 
+    // Service members
     Messenger mService = null;
     boolean mIsBound;
 
+    // UI Members
     private static TextView threadStatus;
-    private TextView serviceConnectionStatus;
+    private static TextView serviceConnectionStatus;
+    private static TextView serverIP;
+    private static TextView serverPort;
+
+    // Preferences
+    private SharedPreferences sharedPref;
+    private boolean serverEnabled;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -37,8 +53,16 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        // Shared Pref
+        sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
+        serverEnabled = sharedPref.getBoolean(
+                AlertificationPreferenceActivity.SERVER_ENABLED, false);
+
+        // UI Handles
         threadStatus = (TextView) findViewById(R.id.threadStatus);
         serviceConnectionStatus = (TextView) findViewById(R.id.serviceConnectionStatus);
+        serverIP = (TextView) findViewById(R.id.serverIP);
+        serverPort = (TextView) findViewById(R.id.serverPort);
 
     }
 
@@ -47,6 +71,15 @@ public class MainActivity extends Activity {
         Log.i(TAG, "<-----OnResume()----->");
         super.onResume();
         CheckIfServiceIsRunning();
+        sharedPref.registerOnSharedPreferenceChangeListener(this);
+        if (serverEnabled) {
+            serverIP.setVisibility(View.VISIBLE);
+            serverPort.setVisibility(View.VISIBLE);
+        } else {
+            serverIP.setVisibility(View.INVISIBLE);
+            serverPort.setVisibility(View.INVISIBLE);
+        }
+
     }
 
     @Override
@@ -65,6 +98,7 @@ public class MainActivity extends Activity {
         } catch (Throwable t) {
             Log.e(TAG, "Failed to unbind from the service", t);
         }
+        sharedPref.unregisterOnSharedPreferenceChangeListener(this);
     }
 
     @Override
@@ -100,6 +134,11 @@ public class MainActivity extends Activity {
                 Toast.LENGTH_LONG).show();
         Intent startServerIntent = new Intent();
         startServerIntent.setAction(START_SERVICE);
+        if (serverEnabled) {
+            startServerIntent.putExtra(SERVER_IP, serverIP.getText());
+            startServerIntent
+                    .putExtra(SERVER_PORT, Integer.parseInt(SERVER_IP));
+        }
         startService(startServerIntent);
         doBindService();
     }
@@ -218,6 +257,21 @@ public class MainActivity extends Activity {
 
     public void setServiceConnectionStatus(String string) {
         serviceConnectionStatus.setText(string);
+    }
+
+    public void onSharedPreferenceChanged(SharedPreferences sharedPreferences,
+            String key) {
+        if (key.equals(AlertificationPreferenceActivity.SERVER_ENABLED)) {
+            serverEnabled = sharedPref.getBoolean(
+                    AlertificationPreferenceActivity.SERVER_ENABLED, false);
+            if (serverEnabled) {
+                serverIP.setVisibility(View.VISIBLE);
+                serverPort.setVisibility(View.VISIBLE);
+            } else {
+                serverIP.setVisibility(View.INVISIBLE);
+                serverPort.setVisibility(View.INVISIBLE);
+            }
+        }
     }
 
 }

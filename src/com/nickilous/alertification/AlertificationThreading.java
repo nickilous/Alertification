@@ -6,7 +6,12 @@ import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
 
+import android.os.Bundle;
+import android.os.Message;
+import android.os.Messenger;
+import android.os.RemoteException;
 import android.util.Log;
 
 public class AlertificationThreading {
@@ -17,8 +22,14 @@ public class AlertificationThreading {
     private AcceptThread mAcceptThread;
     private ConnectThread mConnectThread;
     private ConnectedThread mConnectedThread;
+
     private int mState;
+
     private Socket clientSocket;
+
+    private String mServerIP;
+    private int mServerPort;
+    ArrayList<Messenger> mClients = new ArrayList<Messenger>();
 
     // Constants that indicate the current connection state
     public static final int STATE_NONE = 0; // we're doing nothing
@@ -28,6 +39,12 @@ public class AlertificationThreading {
                                                   // connection
     public static final int STATE_CONNECTED = 3; // now connected to a remote
                                                  // device
+    static final int MSG_SET_THREAD_STATUS = 4;// show thread status
+
+    AlertificationThreading(ArrayList<Messenger> clients) {
+
+        mClients = clients;
+    }
 
     /**
      * Set the current state of the chat connection
@@ -85,10 +102,13 @@ public class AlertificationThreading {
      * @param device  The BluetoothDevice to connect
      * @param secure Socket Security type - Secure (true) , Insecure (false)
      */
-    public synchronized void connect(String serverIp, int serverPort) {
+    public synchronized void connect(String serverIP, int serverPort) {
         if (D) {
             Log.d(TAG, "connect to");
         }
+
+        mServerIP = serverIP;
+        mServerPort = serverPort;
 
         // Cancel any thread attempting to make a connection
         if (mState == STATE_CONNECTING) {
@@ -105,7 +125,7 @@ public class AlertificationThreading {
         }
 
         // Start the thread to connect with the given device
-        mConnectThread = new ConnectThread(serverIp, serverPort);
+        mConnectThread = new ConnectThread(serverIP, serverPort);
         mConnectThread.start();
         setState(STATE_CONNECTING);
     }
@@ -174,10 +194,10 @@ public class AlertificationThreading {
 
     /**
      * Write to the ConnectedThread in an unsynchronized manner
-     * @param out The bytes to write
+     * @param message The bytes to write
      * @see ConnectedThread#write(byte[])
      */
-    public void write(byte[] out) {
+    public void write(byte[] message) {
         // Create temporary object
         ConnectedThread r;
         // Synchronize a copy of the ConnectedThread
@@ -188,7 +208,7 @@ public class AlertificationThreading {
             r = mConnectedThread;
         }
         // Perform the write unsynchronized
-        r.write(out);
+        r.write(message);
     }
 
     /**
@@ -198,7 +218,7 @@ public class AlertificationThreading {
         // Send a failure message back to the Activity
 
         // Start the service over to restart listening mode
-        BluetoothChatService.this.start();
+        // BluetoothChatService.this.start();
     }
 
     /**
@@ -208,7 +228,7 @@ public class AlertificationThreading {
         // Send a failure message back to the Activity
 
         // Start the service over to restart listening mode
-        BluetoothChatService.this.start();
+        // BluetoothChatService.this.start();
     }
 
     /**
@@ -219,7 +239,6 @@ public class AlertificationThreading {
     private class AcceptThread extends Thread {
         // The local server socket
         private final ServerSocket mmServerSocket;
-        private String mSocketType;
 
         public AcceptThread() {
             ServerSocket tmp = null;
@@ -228,7 +247,7 @@ public class AlertificationThreading {
             try {
                 tmp = new ServerSocket(0);
             } catch (IOException e) {
-                Log.e(TAG, "Socket Type: " + mSocketType + "listen() failed", e);
+                Log.e(TAG, "Socket listen() failed", e);
             }
             mmServerSocket = tmp;
         }
@@ -236,12 +255,11 @@ public class AlertificationThreading {
         @Override
         public void run() {
             if (D) {
-                Log.d(TAG, "Socket Type: " + mSocketType
-                        + "BEGIN mAcceptThread" + this);
+                Log.d(TAG, "Socket BEGIN mAcceptThread" + this);
             }
-            setName("AcceptThread" + mSocketType);
+            setName("AcceptThread");
             sendMessageToUI(MSG_SET_THREAD_STATUS, "Listening on IP: "
-                    + SERVER_IP + ":" + mmServerSocket.getLocalPort());
+                    + mServerIP + ":" + mmServerSocket.getLocalPort());
 
             Socket socket = null;
 
@@ -252,14 +270,13 @@ public class AlertificationThreading {
                     // successful connection or an exception
                     socket = mmServerSocket.accept();
                 } catch (IOException e) {
-                    Log.e(TAG, "Socket Type: " + mSocketType
-                            + "accept() failed", e);
+                    Log.e(TAG, "Socket Type accept() failed", e);
                     break;
                 }
 
                 // If a connection was accepted
                 if (socket != null) {
-                    synchronized (AlertificationService.this) {
+                    synchronized (this) {
                         switch (mState) {
                         case STATE_LISTEN:
                         case STATE_CONNECTING:
@@ -281,20 +298,19 @@ public class AlertificationThreading {
                 }
             }
             if (D) {
-                Log.i(TAG, "END mAcceptThread, socket Type: " + mSocketType);
+                Log.i(TAG, "END mAcceptThread");
             }
 
         }
 
         public void cancel() {
             if (D) {
-                Log.d(TAG, "Socket Type" + mSocketType + "cancel " + this);
+                Log.d(TAG, "Socket cancel " + this);
             }
             try {
                 mmServerSocket.close();
             } catch (IOException e) {
-                Log.e(TAG, "Socket Type" + mSocketType
-                        + "close() of server failed", e);
+                Log.e(TAG, "Socket.close() of server failed", e);
             }
         }
     }
@@ -340,7 +356,7 @@ public class AlertificationThreading {
             }
 
             // Reset the ConnectThread because we're done
-            synchronized (AlertificationService.this) {
+            synchronized (this) {
                 mConnectThread = null;
             }
 
@@ -396,9 +412,6 @@ public class AlertificationThreading {
                     // Read from the InputStream
                     bytes = mmInStream.read(buffer);
 
-                    // Send the obtained bytes to the UI Activity
-                    mHandler.obtainMessage(BluetoothChat.MESSAGE_READ, bytes,
-                            -1, buffer).sendToTarget();
                 } catch (IOException e) {
                     Log.e(TAG, "disconnected", e);
                     connectionLost();
@@ -411,13 +424,11 @@ public class AlertificationThreading {
 
         /**
          * Write to the connected OutStream.
-         * @param buffer  The bytes to write
+         * @param message  The bytes to write
          */
-        public void write(byte[] buffer) {
+        public void write(byte[] message) {
             try {
-                mmOutStream.write(buffer);
-
-                // Share the sent message back to the UI Activity
+                mmOutStream.write(message);
 
             } catch (IOException e) {
                 Log.e(TAG, "Exception during write", e);
@@ -429,6 +440,25 @@ public class AlertificationThreading {
                 mmSocket.close();
             } catch (IOException e) {
                 Log.e(TAG, "close() of connect socket failed", e);
+            }
+        }
+    }
+
+    private void sendMessageToUI(int messageType, String message) {
+        for (int i = mClients.size() - 1; i >= 0; i--) {
+            try {
+                // Send data as a String
+                Bundle b = new Bundle();
+                b.putString("str1", message);
+                Message msg = Message.obtain(null, messageType);
+                msg.setData(b);
+                mClients.get(i).send(msg);
+
+            } catch (RemoteException e) {
+                // The client is dead. Remove it from the list; we are going
+                // through the list from back to front so this is safe to do
+                // inside the loop.
+                mClients.remove(i);
             }
         }
     }

@@ -71,4 +71,25 @@
         android:hint="@string/thread_status"
         android:textAppearance="?android:attr/textAppearanceMedium" />
 
+    <EditText
+        android:id="@+id/serverIP"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_centerVertical="true"
+        android:ems="10"
+        android:hint="@string/server_ip_text_field_description" >
+
+        <requestFocus />
+    </EditText>
+
+    <EditText
+        android:id="@+id/serverPort"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignLeft="@+id/serverIP"
+        android:layout_below="@+id/serverIP"
+        android:ems="10"
+        android:hint="@string/server_port_text_field" />
+
 </RelativeLayout>

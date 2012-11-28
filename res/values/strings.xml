@@ -12,5 +12,7 @@
     <string name="service_connection_label">Service Connection:</string>
     <string name="thread_status_label">Thread Status</string>
     <string name="service_connection_hint">Service Connection</string>
+    <string name="server_ip_text_field_description">Server Ip Address</string>
+    <string name="server_port_text_field">Server Port Number</string>
 
 </resources>

@@ -1,9 +1,5 @@
 package com.nickilous.alertification;
 
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.ServerSocket;
@@ -11,7 +7,11 @@ import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.Enumeration;
 
+import android.app.Notification;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
@@ -47,6 +47,12 @@ public class AlertificationService extends Service {
     int mValue = 0; // Holds last value set by a client.
     private AlertificationThreading alertificationThreading;
 
+    // Server Members
+    private String mServerIP;
+    private int mServerPort;
+    private NotificationManager mNotificationManager;
+    private static final int NOTIFCATION_ID = 1;
+
     static final int MSG_REGISTER_CLIENT = 1;
     static final int MSG_UNREGISTER_CLIENT = 2;
     static final int MSG_SET_INT_VALUE = 3;
@@ -54,16 +60,36 @@ public class AlertificationService extends Service {
     static final int MSG_SET_THREAD_STATUS = 5;
     static final int MSG_SET_VALUE = 6;
 
-    public AlertificationService() {
-
-    }
-
     @Override
     public void onCreate() {
         sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
         isRunning = true;
-        alertificationThreading = new AlertificationThreading();
+        alertificationThreading = new AlertificationThreading(mClients);
 
+        mNotificationManager = (NotificationManager) getApplicationContext()
+                .getSystemService(Context.NOTIFICATION_SERVICE);
+
+    }
+
+    public void buildNotification(String contentText) {
+        Intent intent = new Intent(getApplicationContext(), MainActivity.class);
+
+        PendingIntent notificationIntent = PendingIntent.getActivity(
+                getApplicationContext(), 0, intent,
+                PendingIntent.FLAG_CANCEL_CURRENT);
+
+        Notification.Builder builder = new Notification.Builder(
+                getApplicationContext());
+
+        builder.setContentIntent(notificationIntent)
+                .setSmallIcon(R.drawable.ic_launcher)
+                .setWhen(System.currentTimeMillis()).setAutoCancel(true)
+                .setContentTitle("Alertification Service")
+                .setContentText(contentText);
+
+        Notification n = builder.getNotification();
+
+        startForeground(NOTIFCATION_ID, n);
     }
 
     @Override
@@ -77,10 +103,14 @@ public class AlertificationService extends Service {
             if (serverEnabled) {
                 alertificationThreading.start();
             } else {
-                alertificationThreading.connect();
+                mServerIP = intent.getStringExtra(MainActivity.SERVER_IP);
+                mServerPort = intent.getIntExtra(MainActivity.SERVER_PORT, 0);
+                buildNotification("Connect to: " + mServerIP + ":"
+                        + mServerPort);
+                alertificationThreading.connect(mServerIP, mServerPort);
             }
         } else if (intent.getAction().equals(MainActivity.STOP_SERVICE)) {
-            stop();
+            alertificationThreading.stop();
             stopSelf();
         } else if (intent.getAction().equals(
                 "android.provider.Telephony.SMS_RECEIVED")
@@ -193,18 +223,8 @@ public class AlertificationService extends Service {
 
     private void sendMessageToServer(String message) {
         Log.i(TAG, "<-----sendMessageToServer()----->");
-        PrintWriter out;
-        try {
 
-            out = new PrintWriter(new BufferedWriter(new OutputStreamWriter(
-                    clientSocket.getOutputStream())), true);
-            // where you issue the commands
-            Log.i(TAG, "Sending message: " + message);
-            out.println(message);
-        } catch (IOException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
+        alertificationThreading.write(message.getBytes());
 
         Log.i(TAG, "message sent");
 
