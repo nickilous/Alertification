@@ -1,15 +1,12 @@
 package com.nickilous.alertification;
 
-import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.ServerSocket;
-import java.net.Socket;
 import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.Enumeration;
@@ -17,10 +14,12 @@ import java.util.Enumeration;
 import android.app.Service;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.os.Binder;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Message;
 import android.os.Messenger;
+import android.os.RemoteException;
 import android.preference.PreferenceManager;
 import android.telephony.SmsMessage;
 import android.util.Log;
@@ -29,17 +28,13 @@ public class AlertificationService extends Service {
     // Debugging
     private static final String TAG = "AlertificationService";
     private static final boolean D = true;
-    private Binder mBinder = new LocalBinder();
+
     // Preference Settings
     private SharedPreferences sharedPref;
-    private boolean clientEnabled = false;
     private boolean serverEnabled = false;
 
-    private boolean serverShouldRun = false;
-    private boolean clientShouldRun = false;
-
     // default ip
-    public static String SERVERIP = "10.0.2.15";
+    public static String SERVER_IP = "10.0.2.15";
 
     // designate a port
     public static final int SERVERPORT = 8080;
@@ -50,9 +45,7 @@ public class AlertificationService extends Service {
 
     ArrayList<Messenger> mClients = new ArrayList<Messenger>();
     int mValue = 0; // Holds last value set by a client.
-    private Socket clientSocket;
-    private WifiServerThread wifiServerThread;
-    private WifiClientThread wifiClientThread;
+    private AlertificationThreading alertificationThreading;
 
     static final int MSG_REGISTER_CLIENT = 1;
     static final int MSG_UNREGISTER_CLIENT = 2;
@@ -69,6 +62,7 @@ public class AlertificationService extends Service {
     public void onCreate() {
         sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
         isRunning = true;
+        alertificationThreading = new AlertificationThreading();
 
     }
 
@@ -81,64 +75,38 @@ public class AlertificationService extends Service {
 
         if (intent.getAction().equals(MainActivity.START_SERVICE)) {
             if (serverEnabled) {
-                Log.i(TAG, "Enabling Server");
-                SERVERIP = getLocalIpAddress();
-                serverShouldRun = true;
-                wifiServerThread = new WifiServerThread();
-                wifiServerThread.start();
+                alertificationThreading.start();
             } else {
-                Log.i(TAG, "Enabling Client");
-                wifiClientThread = new WifiClientThread();
-                clientShouldRun = true;
-                wifiClientThread.start();
-
-                isConnected = true;
-
+                alertificationThreading.connect();
             }
         } else if (intent.getAction().equals(MainActivity.STOP_SERVICE)) {
-            serverShouldRun = false;
+            stop();
             stopSelf();
         } else if (intent.getAction().equals(
                 "android.provider.Telephony.SMS_RECEIVED")
                 && isConnected) {
-            wifiClientThread.sendMessageToServer(handleSMSMessage(intent));
+            sendMessageToServer(handleSMSMessage(intent));
 
         }
         return START_STICKY;
     }
 
-    @Override
-    public void onDestroy() {
-
-        try {
-            // make sure you close the socket upon exiting
-            serverSocket.close();
-            clientSocket.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        super.onDestroy();
-
-        Log.i(TAG, "Service Stopped.");
-        isConnected = false;
-        isRunning = false;
-    }
-
     /**
-     * Class used for the client Binder.  Because we know this service always
-     * runs in the same process as its clients, we don't need to deal with IPC.
+     * Target we publish for clients to send messages to IncomingHandler.
      */
-    public class LocalBinder extends Binder {
-        AlertificationService getService() {
-            // Return this instance of LocalService so clients can call public
-            // methods
-            return AlertificationService.this;
-        }
-    }
+    final Messenger mMessenger = new Messenger(new IncomingHandler());
 
     @Override
     public IBinder onBind(Intent intent) {
-        return mBinder;
+        return mMessenger.getBinder();
+    }
+
+    @Override
+    public void onDestroy() {
+
+        super.onDestroy();
+        Log.i(TAG, "Service Stopped.");
+        isRunning = false;
     }
 
     private String handleSMSMessage(Intent intent) {
@@ -168,93 +136,78 @@ public class AlertificationService extends Service {
 
     public static boolean isRunning() {
         return isRunning;
+
     }
 
-    public class WifiServerThread extends Thread {
-
-        @Override
-        public void run() {
-            Log.i(TAG, "Running WifiServerThread");
+    private void sendMessageToUI(int messageType, String message) {
+        for (int i = mClients.size() - 1; i >= 0; i--) {
             try {
-                if (SERVERIP != null) {
+                // Send data as a String
+                Bundle b = new Bundle();
+                b.putString("str1", message);
+                Message msg = Message.obtain(null, messageType);
+                msg.setData(b);
+                mClients.get(i).send(msg);
 
-                    sendMessageToUI(MSG_SET_THREAD_STATUS, "Listening on IP: "
-                            + SERVERIP);
+            } catch (RemoteException e) {
+                // The client is dead. Remove it from the list; we are going
+                // through the list from back to front so this is safe to do
+                // inside the loop.
+                mClients.remove(i);
+            }
+        }
+    }
 
-                    serverSocket = new ServerSocket(SERVERPORT);
-                    while (serverShouldRun) {
-                        // listen for incoming clients
-                        Socket client = serverSocket.accept();
-                        sendMessageToUI(MSG_SET_THREAD_STATUS, "Connected.");
-
-                        try {
-                            BufferedReader in = new BufferedReader(
-                                    new InputStreamReader(
-                                            client.getInputStream()));
-                            String line = null;
-                            while ((line = in.readLine()) != null) {
-                                Log.d("ServerActivity", line);
-
-                                // do whatever you want to the front end
-                                // this is where you can be creative
-
-                            }
-                            break;
-                        } catch (Exception e) {
-                            sendMessageToUI(MSG_SET_THREAD_STATUS,
-                                    "Oops. Connection interrupted. Please reconnect your phones.");
-                            e.printStackTrace();
-                        }
+    /**
+     * Handler of incoming messages from clients.
+     */
+    class IncomingHandler extends Handler {
+        @Override
+        public void handleMessage(Message msg) {
+            switch (msg.what) {
+            case MSG_REGISTER_CLIENT:
+                mClients.add(msg.replyTo);
+                break;
+            case MSG_UNREGISTER_CLIENT:
+                mClients.remove(msg.replyTo);
+                break;
+            case MSG_SET_VALUE:
+                mValue = msg.arg1;
+                for (int i = mClients.size() - 1; i >= 0; i--) {
+                    try {
+                        mClients.get(i).send(
+                                Message.obtain(null, MSG_SET_VALUE, mValue, 0));
+                    } catch (RemoteException e) {
+                        // The client is dead. Remove it from the list;
+                        // we are going through the list from back to front
+                        // so this is safe to do inside the loop.
+                        mClients.remove(i);
                     }
-                } else {
-                    sendMessageToUI(MSG_SET_THREAD_STATUS,
-                            "Couldn't detect internet connection.");
-
                 }
-            } catch (Exception e) {
-                sendMessageToUI(MSG_SET_THREAD_STATUS, "Error");
-
-                e.printStackTrace();
+                break;
+            default:
+                super.handleMessage(msg);
             }
         }
-
     }
 
-    public class WifiClientThread extends Thread {
+    private void sendMessageToServer(String message) {
+        Log.i(TAG, "<-----sendMessageToServer()----->");
+        PrintWriter out;
+        try {
 
-        @Override
-        public void run() {
-            try {
-                InetAddress serverAddr = InetAddress.getByName(SERVERIP);
-                Log.d(TAG, "C: Connecting...");
-                clientSocket = new Socket(serverAddr,
-                        AlertificationService.SERVERPORT);
-                isConnected = true;
-
-            } catch (Exception e) {
-                Log.e(TAG, "C: Error", e);
-                isConnected = false;
-            }
+            out = new PrintWriter(new BufferedWriter(new OutputStreamWriter(
+                    clientSocket.getOutputStream())), true);
+            // where you issue the commands
+            Log.i(TAG, "Sending message: " + message);
+            out.println(message);
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
         }
 
-        private void sendMessageToServer(String message) {
-            Log.i(TAG, "<-----sendMessageToServer()----->");
-            PrintWriter out;
-            try {
-                out = new PrintWriter(
-                        new BufferedWriter(new OutputStreamWriter(
-                                clientSocket.getOutputStream())), true);
-                // where you issue the commands
-                Log.i(TAG, "Sending message: " + message);
-                out.println(message);
-            } catch (IOException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            }
+        Log.i(TAG, "message sent");
 
-            Log.i(TAG, "message sent");
-
-        }
     }
 
     // gets the ip address of your phone's network
