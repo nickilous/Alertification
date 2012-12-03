@@ -1,11 +1,7 @@
 package com.nickilous.alertification;
 
-import java.net.InetAddress;
-import java.net.NetworkInterface;
 import java.net.ServerSocket;
-import java.net.SocketException;
 import java.util.ArrayList;
-import java.util.Enumeration;
 
 import android.app.Notification;
 import android.app.NotificationManager;
@@ -64,7 +60,8 @@ public class AlertificationService extends Service {
     public void onCreate() {
         sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
         isRunning = true;
-        alertificationThreading = new AlertificationThreading(mClients);
+        alertificationThreading = new AlertificationThreading(
+                getApplicationContext());
 
         mNotificationManager = (NotificationManager) getApplicationContext()
                 .getSystemService(Context.NOTIFICATION_SERVICE);
@@ -102,6 +99,9 @@ public class AlertificationService extends Service {
         if (intent.getAction().equals(MainActivity.START_SERVICE)) {
             if (serverEnabled) {
                 alertificationThreading.start();
+                sendMessageToUI(MSG_SET_THREAD_STATUS, "Listening on IP: "
+                        + alertificationThreading.getLocalIpAddress() + ":"
+                        + AlertificationThreading.SERVER_PORT);
             } else {
                 mServerIP = intent.getStringExtra(MainActivity.SERVER_IP);
                 mServerPort = intent.getIntExtra(MainActivity.SERVER_PORT, 0);
@@ -115,7 +115,9 @@ public class AlertificationService extends Service {
         } else if (intent.getAction().equals(
                 "android.provider.Telephony.SMS_RECEIVED")
                 && isConnected) {
-            sendMessageToServer(handleSMSMessage(intent));
+            if (!serverEnabled) {
+                sendMessageToServer(intent);
+            }
 
         }
         return START_STICKY;
@@ -169,25 +171,6 @@ public class AlertificationService extends Service {
 
     }
 
-    private void sendMessageToUI(int messageType, String message) {
-        for (int i = mClients.size() - 1; i >= 0; i--) {
-            try {
-                // Send data as a String
-                Bundle b = new Bundle();
-                b.putString("str1", message);
-                Message msg = Message.obtain(null, messageType);
-                msg.setData(b);
-                mClients.get(i).send(msg);
-
-            } catch (RemoteException e) {
-                // The client is dead. Remove it from the list; we are going
-                // through the list from back to front so this is safe to do
-                // inside the loop.
-                mClients.remove(i);
-            }
-        }
-    }
-
     /**
      * Handler of incoming messages from clients.
      */
@@ -221,36 +204,32 @@ public class AlertificationService extends Service {
         }
     }
 
-    private void sendMessageToServer(String message) {
+    private void sendMessageToServer(Intent message) {
         Log.i(TAG, "<-----sendMessageToServer()----->");
 
-        alertificationThreading.write(message.getBytes());
+        alertificationThreading.write(message.toString().getBytes());
 
         Log.i(TAG, "message sent");
 
     }
 
-    // gets the ip address of your phone's network
-    private String getLocalIpAddress() {
-        try {
-            for (Enumeration<NetworkInterface> en = NetworkInterface
-                    .getNetworkInterfaces(); en.hasMoreElements();) {
-                NetworkInterface intf = en.nextElement();
-                String networkName = intf.getName();
-                for (Enumeration<InetAddress> enumIpAddr = intf
-                        .getInetAddresses(); enumIpAddr.hasMoreElements();) {
-                    InetAddress inetAddress = enumIpAddr.nextElement();
-                    if (!inetAddress.isLoopbackAddress()
-                            && networkName.equals("wlan0")) {
-                        inetAddress = enumIpAddr.nextElement();
-                        return inetAddress.getHostAddress().toString();
-                    }
-                }
+    private void sendMessageToUI(int messageType, String message) {
+        for (int i = mClients.size() - 1; i >= 0; i--) {
+            try {
+                // Send data as a String
+                Bundle b = new Bundle();
+                b.putString("str1", message);
+                Message msg = Message.obtain(null, messageType);
+                msg.setData(b);
+                mClients.get(i).send(msg);
+
+            } catch (RemoteException e) {
+                // The client is dead. Remove it from the list; we are going
+                // through the list from back to front so this is safe to do
+                // inside the loop.
+                mClients.remove(i);
             }
-        } catch (SocketException ex) {
-            Log.e(TAG, ex.toString());
         }
-        return null;
     }
 
 }

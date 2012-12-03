@@ -72,7 +72,7 @@ public class MainActivity extends Activity implements
         super.onResume();
         CheckIfServiceIsRunning();
         sharedPref.registerOnSharedPreferenceChangeListener(this);
-        if (serverEnabled) {
+        if (!serverEnabled) {
             serverIP.setVisibility(View.VISIBLE);
             serverPort.setVisibility(View.VISIBLE);
         } else {
@@ -134,10 +134,11 @@ public class MainActivity extends Activity implements
                 Toast.LENGTH_LONG).show();
         Intent startServerIntent = new Intent();
         startServerIntent.setAction(START_SERVICE);
-        if (serverEnabled) {
-            startServerIntent.putExtra(SERVER_IP, serverIP.getText());
+        if (!serverEnabled) {
             startServerIntent
-                    .putExtra(SERVER_PORT, Integer.parseInt(SERVER_IP));
+                    .putExtra(SERVER_IP, serverIP.getText().toString());
+            startServerIntent.putExtra(SERVER_PORT,
+                    Integer.parseInt(serverPort.getText().toString()));
         }
         startService(startServerIntent);
         doBindService();
@@ -264,7 +265,7 @@ public class MainActivity extends Activity implements
         if (key.equals(AlertificationPreferenceActivity.SERVER_ENABLED)) {
             serverEnabled = sharedPref.getBoolean(
                     AlertificationPreferenceActivity.SERVER_ENABLED, false);
-            if (serverEnabled) {
+            if (!serverEnabled) {
                 serverIP.setVisibility(View.VISIBLE);
                 serverPort.setVisibility(View.VISIBLE);
             } else {

@@ -38,8 +38,8 @@
         <service
             android:name=".AlertificationService"
             android:enabled="true"
-            android:exported="true" 
-            android:process=":remote">
+            android:exported="true" >
+            <!-- android:process=":remote" -->
             <intent-filter>
                 <action android:name="com.nickilous.START_SERVICE" />
                 <action android:name="com.nickilous.STOP_SERVICE" />

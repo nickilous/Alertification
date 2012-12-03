@@ -4,14 +4,14 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetAddress;
+import java.net.NetworkInterface;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.ArrayList;
+import java.net.SocketException;
+import java.util.Enumeration;
 
-import android.os.Bundle;
-import android.os.Message;
-import android.os.Messenger;
-import android.os.RemoteException;
+import android.content.Context;
+import android.content.Intent;
 import android.util.Log;
 
 public class AlertificationThreading {
@@ -28,8 +28,10 @@ public class AlertificationThreading {
     private Socket clientSocket;
 
     private String mServerIP;
+
     private int mServerPort;
-    ArrayList<Messenger> mClients = new ArrayList<Messenger>();
+
+    private Context mContext;
 
     // Constants that indicate the current connection state
     public static final int STATE_NONE = 0; // we're doing nothing
@@ -41,9 +43,12 @@ public class AlertificationThreading {
                                                  // device
     static final int MSG_SET_THREAD_STATUS = 4;// show thread status
 
-    AlertificationThreading(ArrayList<Messenger> clients) {
+    static final int SERVER_PORT = 8080;
 
-        mClients = clients;
+    AlertificationThreading(Context context) {
+
+        mContext = context;
+
     }
 
     /**
@@ -56,6 +61,9 @@ public class AlertificationThreading {
         }
         mState = state;
 
+        if (state == STATE_LISTEN) {
+
+        }
         // Give the new state to the Handler so the UI Activity can update
         // mHandler.obtainMessage(BluetoothChat.MESSAGE_STATE_CHANGE, state,
         // -1).sendToTarget();
@@ -245,7 +253,7 @@ public class AlertificationThreading {
 
             // Create a new listening server socket
             try {
-                tmp = new ServerSocket(0);
+                tmp = new ServerSocket(SERVER_PORT);
             } catch (IOException e) {
                 Log.e(TAG, "Socket listen() failed", e);
             }
@@ -258,8 +266,6 @@ public class AlertificationThreading {
                 Log.d(TAG, "Socket BEGIN mAcceptThread" + this);
             }
             setName("AcceptThread");
-            sendMessageToUI(MSG_SET_THREAD_STATUS, "Listening on IP: "
-                    + mServerIP + ":" + mmServerSocket.getLocalPort());
 
             Socket socket = null;
 
@@ -411,6 +417,9 @@ public class AlertificationThreading {
                 try {
                     // Read from the InputStream
                     bytes = mmInStream.read(buffer);
+                    String message = new String(buffer, 0, bytes);
+                    Intent intent = new Intent(message);
+                    mContext.sendBroadcast(intent);
 
                 } catch (IOException e) {
                     Log.e(TAG, "disconnected", e);
@@ -444,22 +453,26 @@ public class AlertificationThreading {
         }
     }
 
-    private void sendMessageToUI(int messageType, String message) {
-        for (int i = mClients.size() - 1; i >= 0; i--) {
-            try {
-                // Send data as a String
-                Bundle b = new Bundle();
-                b.putString("str1", message);
-                Message msg = Message.obtain(null, messageType);
-                msg.setData(b);
-                mClients.get(i).send(msg);
-
-            } catch (RemoteException e) {
-                // The client is dead. Remove it from the list; we are going
-                // through the list from back to front so this is safe to do
-                // inside the loop.
-                mClients.remove(i);
+    // gets the ip address of your phone's network
+    public String getLocalIpAddress() {
+        try {
+            for (Enumeration<NetworkInterface> en = NetworkInterface
+                    .getNetworkInterfaces(); en.hasMoreElements();) {
+                NetworkInterface intf = en.nextElement();
+                String networkName = intf.getName();
+                for (Enumeration<InetAddress> enumIpAddr = intf
+                        .getInetAddresses(); enumIpAddr.hasMoreElements();) {
+                    InetAddress inetAddress = enumIpAddr.nextElement();
+                    if (!inetAddress.isLoopbackAddress()
+                            && networkName.equals("wlan0")) {
+                        inetAddress = enumIpAddr.nextElement();
+                        return inetAddress.getHostAddress().toString();
+                    }
+                }
             }
+        } catch (SocketException ex) {
+            Log.e(TAG, ex.toString());
         }
+        return null;
     }
 }
