@@ -8,7 +8,6 @@ import java.net.NetworkInterface;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
-import java.net.URISyntaxException;
 import java.util.Enumeration;
 
 import android.content.Context;
@@ -422,16 +421,10 @@ public class AlertificationThreading {
                     // Read from the InputStream
                     bytes = mmInStream.read(buffer);
                     String message = new String(buffer, 0, bytes);
-
-                    try {
-                        tmpIntent = Intent.parseUri(message, 0);
-                    } catch (URISyntaxException e) {
-                        // TODO Auto-generated catch block
-                        e.printStackTrace();
-                    }
-                    mmIntent = tmpIntent;
-
-                    mContext.sendBroadcast(mmIntent);
+                    Intent intent = new Intent(
+                            TextMessage.TEXT_MESSAGE_RECEIVED);
+                    intent.putExtra("textmessage", message);
+                    mContext.sendBroadcast(intent);
 
                 } catch (IOException e) {
                     Log.e(TAG, "disconnected", e);
