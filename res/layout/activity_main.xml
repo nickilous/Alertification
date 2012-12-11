@@ -41,7 +41,8 @@
         android:layout_below="@+id/statusLabel"
         android:layout_toRightOf="@+id/statusLabel"
         android:text="@string/service_connection_label"
-        android:textAppearance="?android:attr/textAppearanceLarge" />
+        android:textAppearance="?android:attr/textAppearanceLarge"
+        />
 
     <TextView
         android:id="@+id/serviceConnectionStatus"
@@ -78,7 +79,8 @@
         android:layout_centerHorizontal="true"
         android:layout_centerVertical="true"
         android:ems="10"
-        android:hint="@string/server_ip_text_field_description" >
+        android:hint="@string/server_ip_text_field_description"
+        android:inputType="date" >
 
         <requestFocus />
     </EditText>
@@ -90,6 +92,7 @@
         android:layout_alignLeft="@+id/serverIP"
         android:layout_below="@+id/serverIP"
         android:ems="10"
-        android:hint="@string/server_port_text_field" />
+        android:hint="@string/server_port_text_field"
+        android:inputType="number" />
 
 </RelativeLayout>

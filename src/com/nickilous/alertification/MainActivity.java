@@ -134,7 +134,11 @@ public class MainActivity extends Activity implements
                 Toast.LENGTH_LONG).show();
         Intent startServerIntent = new Intent();
         startServerIntent.setAction(START_SERVICE);
-        if (!serverEnabled) {
+        if (serverEnabled) {
+            threadStatus.setText("Server is running on IP:PORT: "
+                    + AlertificationThreading.getLocalIpAddress() + ":"
+                    + AlertificationThreading.SERVER_PORT);
+        } else {
             startServerIntent
                     .putExtra(SERVER_IP, serverIP.getText().toString());
             startServerIntent.putExtra(SERVER_PORT,
@@ -249,11 +253,6 @@ public class MainActivity extends Activity implements
                 super.handleMessage(msg);
             }
         }
-    }
-
-    public void setThreadStatus(String string) {
-        threadStatus.setText(string);
-
     }
 
     public void setServiceConnectionStatus(String string) {

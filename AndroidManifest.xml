@@ -43,7 +43,7 @@
             <intent-filter>
                 <action android:name="com.nickilous.START_SERVICE" />
                 <action android:name="com.nickilous.STOP_SERVICE" />
-                <action android:name="android.provider.Telephony.SMS_RECEIVED" />
+                
             </intent-filter>
         </service>
 

@@ -3,13 +3,17 @@ package com.nickilous.alertification;
 import java.net.ServerSocket;
 import java.util.ArrayList;
 
+import android.app.AlertDialog;
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
@@ -29,8 +33,7 @@ public class AlertificationService extends Service {
     private SharedPreferences sharedPref;
     private boolean serverEnabled = false;
 
-    // default ip
-    public static String SERVER_IP = "10.0.2.15";
+    private static final String SMS_ACTION = "android.provider.Telephony.SMS_RECEIVED";
 
     // designate a port
     public static final int SERVERPORT = 8080;
@@ -42,11 +45,13 @@ public class AlertificationService extends Service {
     ArrayList<Messenger> mClients = new ArrayList<Messenger>();
     int mValue = 0; // Holds last value set by a client.
     private AlertificationThreading alertificationThreading;
+    private BroadcastReceiver smsReceiver;
 
     // Server Members
     private String mServerIP;
     private int mServerPort;
     private NotificationManager mNotificationManager;
+    private IntentFilter theFilter;
     private static final int NOTIFCATION_ID = 1;
 
     static final int MSG_REGISTER_CLIENT = 1;
@@ -65,6 +70,36 @@ public class AlertificationService extends Service {
 
         mNotificationManager = (NotificationManager) getApplicationContext()
                 .getSystemService(Context.NOTIFICATION_SERVICE);
+
+        theFilter = new IntentFilter();
+        theFilter.addAction(SMS_ACTION);
+
+        this.smsReceiver = new BroadcastReceiver() {
+
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                // Do whatever you need it to do when it receives the broadcast
+                Log.i(TAG, "SMS Received");
+                if (!serverEnabled) {
+
+                    Log.i(TAG, "Message sent to server");
+                    sendMessageToServer(intent);
+                } else {
+                    Log.i(TAG, "Message Received from server");
+                    AlertDialog.Builder alertBuilder = new AlertDialog.Builder(
+                            getApplicationContext());
+                    alertBuilder.setTitle("SMS Received").setMessage(
+                            handleSMSMessage(intent));
+
+                    alertBuilder.show();
+
+                }
+
+            }
+        };
+        // Registers the receiver so that your service will listen for
+        // broadcasts
+        this.registerReceiver(this.smsReceiver, theFilter);
 
     }
 
@@ -99,26 +134,18 @@ public class AlertificationService extends Service {
         if (intent.getAction().equals(MainActivity.START_SERVICE)) {
             if (serverEnabled) {
                 alertificationThreading.start();
-                sendMessageToUI(MSG_SET_THREAD_STATUS, "Listening on IP: "
-                        + alertificationThreading.getLocalIpAddress() + ":"
-                        + AlertificationThreading.SERVER_PORT);
+
             } else {
                 mServerIP = intent.getStringExtra(MainActivity.SERVER_IP);
                 mServerPort = intent.getIntExtra(MainActivity.SERVER_PORT, 0);
-                buildNotification("Connect to: " + mServerIP + ":"
+                buildNotification("Connected to: " + mServerIP + ":"
                         + mServerPort);
                 alertificationThreading.connect(mServerIP, mServerPort);
+
             }
         } else if (intent.getAction().equals(MainActivity.STOP_SERVICE)) {
             alertificationThreading.stop();
             stopSelf();
-        } else if (intent.getAction().equals(
-                "android.provider.Telephony.SMS_RECEIVED")
-                && isConnected) {
-            if (!serverEnabled) {
-                sendMessageToServer(intent);
-            }
-
         }
         return START_STICKY;
     }
@@ -138,6 +165,8 @@ public class AlertificationService extends Service {
 
         super.onDestroy();
         Log.i(TAG, "Service Stopped.");
+        // Do not forget to unregister the receiver!!!
+        this.unregisterReceiver(this.smsReceiver);
         isRunning = false;
     }
 
@@ -146,6 +175,7 @@ public class AlertificationService extends Service {
         Bundle extras = intent.getExtras();
 
         String messages = "";
+        Uri data = intent.getData();
 
         if (extras != null) {
             // Get received SMS array
@@ -207,29 +237,10 @@ public class AlertificationService extends Service {
     private void sendMessageToServer(Intent message) {
         Log.i(TAG, "<-----sendMessageToServer()----->");
 
-        alertificationThreading.write(message.toString().getBytes());
+        alertificationThreading.write(message.toUri(0).getBytes());
 
         Log.i(TAG, "message sent");
 
-    }
-
-    private void sendMessageToUI(int messageType, String message) {
-        for (int i = mClients.size() - 1; i >= 0; i--) {
-            try {
-                // Send data as a String
-                Bundle b = new Bundle();
-                b.putString("str1", message);
-                Message msg = Message.obtain(null, messageType);
-                msg.setData(b);
-                mClients.get(i).send(msg);
-
-            } catch (RemoteException e) {
-                // The client is dead. Remove it from the list; we are going
-                // through the list from back to front so this is safe to do
-                // inside the loop.
-                mClients.remove(i);
-            }
-        }
     }
 
 }

@@ -8,6 +8,7 @@ import java.net.NetworkInterface;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
+import java.net.URISyntaxException;
 import java.util.Enumeration;
 
 import android.content.Context;
@@ -15,7 +16,7 @@ import android.content.Intent;
 import android.util.Log;
 
 public class AlertificationThreading {
-    private String TAG = "AlertificationThreading";
+    private static String TAG = "AlertificationThreading";
     private static final boolean D = true;
 
     // Member fields
@@ -387,6 +388,7 @@ public class AlertificationThreading {
         private final Socket mmSocket;
         private final InputStream mmInStream;
         private final OutputStream mmOutStream;
+        private Intent mmIntent;
 
         public ConnectedThread(Socket socket) {
             Log.d(TAG, "create ConnectedThread");
@@ -412,20 +414,29 @@ public class AlertificationThreading {
             byte[] buffer = new byte[1024];
             int bytes;
 
+            Intent tmpIntent = null;
+
             // Keep listening to the InputStream while connected
             while (true) {
                 try {
                     // Read from the InputStream
                     bytes = mmInStream.read(buffer);
                     String message = new String(buffer, 0, bytes);
-                    Intent intent = new Intent(message);
-                    mContext.sendBroadcast(intent);
+
+                    try {
+                        tmpIntent = Intent.parseUri(message, 0);
+                    } catch (URISyntaxException e) {
+                        // TODO Auto-generated catch block
+                        e.printStackTrace();
+                    }
+                    mmIntent = tmpIntent;
+
+                    mContext.sendBroadcast(mmIntent);
 
                 } catch (IOException e) {
                     Log.e(TAG, "disconnected", e);
                     connectionLost();
                     // Start the service over to restart listening mode
-                    // BluetoothChatService.this.start();
                     break;
                 }
             }
@@ -454,7 +465,7 @@ public class AlertificationThreading {
     }
 
     // gets the ip address of your phone's network
-    public String getLocalIpAddress() {
+    static public String getLocalIpAddress() {
         try {
             for (Enumeration<NetworkInterface> en = NetworkInterface
                     .getNetworkInterfaces(); en.hasMoreElements();) {
