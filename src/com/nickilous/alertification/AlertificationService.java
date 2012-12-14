@@ -1,7 +1,7 @@
 package com.nickilous.alertification;
 
-import android.app.AlertDialog;
 import android.app.Notification;
+import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.BroadcastReceiver;
@@ -36,21 +36,23 @@ public class AlertificationService extends Service {
 
     private IntentFilter theFilter;
     private Context mContext;
-    private static final int NOTIFCATION_ID = 1;
+    private NotificationManager mNotificationManager;
+    private static final int NOTIFICATION_SERVICE_ID = 1;
+    private static final int NOTIFICATION_TEXT_MESSAGE_ID = 2;
 
     @Override
     public void onCreate() {
         sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
         mContext = getApplicationContext();
         isRunning = true;
-
+        mNotificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         alertificationThreading = new AlertificationThreading(mContext);
 
         createAndRegisterBroadcastReceiver();
 
     }
 
-    public void buildNotification(String contentText) {
+    public void buildForeGroundNotification(String contentText) {
         Intent intent = new Intent(getApplicationContext(), MainActivity.class);
 
         PendingIntent notificationIntent = PendingIntent.getActivity(
@@ -68,7 +70,24 @@ public class AlertificationService extends Service {
 
         Notification n = builder.getNotification();
 
-        startForeground(NOTIFCATION_ID, n);
+        startForeground(NOTIFICATION_SERVICE_ID, n);
+    }
+
+    public void buildSMSNotification(TextMessage textMessage) {
+        Notification.Builder builder = new Notification.Builder(
+                getApplicationContext());
+
+        builder.setSmallIcon(R.drawable.ic_launcher)
+                .setWhen(System.currentTimeMillis())
+                .setAutoCancel(true)
+                .setContentTitle("Text Message Received")
+                .setContentText(
+                        "Sender: " + textMessage.getSender() + " Message: "
+                                + textMessage.getMessage());
+
+        Notification n = builder.getNotification();
+        mNotificationManager.notify(NOTIFICATION_TEXT_MESSAGE_ID, n);
+
     }
 
     @Override
@@ -85,7 +104,7 @@ public class AlertificationService extends Service {
             } else {
                 mServerIP = intent.getStringExtra(MainActivity.SERVER_IP);
                 mServerPort = intent.getIntExtra(MainActivity.SERVER_PORT, 0);
-                buildNotification("Connected to: " + mServerIP + ":"
+                buildForeGroundNotification("Connected to: " + mServerIP + ":"
                         + mServerPort);
                 alertificationThreading.connect(mServerIP, mServerPort);
 
@@ -146,15 +165,7 @@ public class AlertificationService extends Service {
                     Log.i(TAG, "Message Received from server");
                     TextMessage textMessage = new TextMessage(
                             intent.getStringExtra("textmessage"));
-
-                    AlertDialog.Builder alertBuilder = new AlertDialog.Builder(
-                            getApplicationContext());
-                    alertBuilder.setTitle(
-                            "SMS Received from: " + textMessage.getSender())
-                            .setMessage(textMessage.getMessage());
-
-                    alertBuilder.show();
-
+                    buildSMSNotification(textMessage);
                 }
 
             }
@@ -163,5 +174,4 @@ public class AlertificationService extends Service {
         // broadcasts
         this.registerReceiver(this.smsReceiver, theFilter);
     }
-
 }
