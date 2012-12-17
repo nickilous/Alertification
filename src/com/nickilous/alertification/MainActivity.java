@@ -137,7 +137,7 @@ public class MainActivity extends Activity implements
         if (serverEnabled) {
             threadStatus.setText("Server is running on IP:PORT: "
                     + NetworkTools.getLocalIpAddress() + ":"
-                    + NetworkTools.SERVER_PORT);
+                    + NetworkTools.DEFAULT_SERVER_PORT);
         } else {
             startServerIntent
                     .putExtra(SERVER_IP, serverIP.getText().toString());

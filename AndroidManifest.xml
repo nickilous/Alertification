@@ -1,26 +1,26 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.nickilous.alertification"
+<?xml version="1.0" encoding="utf-8"?>
+<manifest package="com.nickilous.alertification"
     android:versionCode="1"
-    android:versionName="1.0" >
+    android:versionName="1.0" xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-sdk
         android:minSdkVersion="15"
-        android:targetSdkVersion="15" />
+        android:targetSdkVersion="16" />
 
     <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
-    <uses-permission android:name="android.permission.READ_SMS"/>
-    <uses-permission android:name="android.permission.RECEIVE_SMS"/>
+    <uses-permission android:name="android.permission.READ_SMS" />
+    <uses-permission android:name="android.permission.RECEIVE_SMS" />
 
     <application
         android:icon="@drawable/ic_launcher"
         android:label="@string/app_name"
         android:theme="@style/AppTheme" >
         <activity
-            android:name=".MainActivity"
+            android:name="com.nickilous.alertification.MainActivity"
             android:label="@string/title_activity_main" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -29,25 +29,26 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".AlertificationPreferenceActivity"
+            android:name="com.nickilous.alertification.AlertificationPreferenceActivity"
             android:label="@string/title_activity_alertification_preference" >
         </activity>
 
-        
-
         <service
-            android:name=".AlertificationService"
+            android:name="com.nickilous.alertification.service.AlertificationService"
             android:enabled="true"
             android:exported="true" >
+
             <!-- android:process=":remote" -->
             <intent-filter>
                 <action android:name="com.nickilous.START_SERVICE" />
                 <action android:name="com.nickilous.STOP_SERVICE" />
-                
             </intent-filter>
         </service>
-
-        
+        <service
+            android:name="com.nickilous.alertification.NetworkDiscoveryService"
+            android:enabled="true"
+            android:exported="true" >
+        </service>
     </application>
 
 </manifest>

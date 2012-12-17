@@ -10,7 +10,7 @@ import android.util.Log;
 public class NetworkTools {
     final static String TAG = "NetworkTools";
 
-    public static final int SERVER_PORT = 8080;
+    public static final int DEFAULT_SERVER_PORT = 8080;
 
     // gets the ip address of your phone's network
     static public String getLocalIpAddress() {

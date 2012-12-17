@@ -22,6 +22,7 @@ public class NetworkThreading {
     private ConnectThread mConnectThread;
     private ConnectedThread mConnectedThread;
 
+    // Current Network state Variable
     private int mState;
 
     private Context mContext;
@@ -241,7 +242,7 @@ public class NetworkThreading {
 
             // Create a new listening server socket
             try {
-                tmp = new ServerSocket(NetworkTools.SERVER_PORT);
+                tmp = new ServerSocket(NetworkTools.DEFAULT_SERVER_PORT);
             } catch (IOException e) {
                 Log.e(TAG, "Socket listen() failed", e);
             }

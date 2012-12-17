@@ -17,7 +17,6 @@ import com.nickilous.alertification.AlertificationPreferenceActivity;
 import com.nickilous.alertification.MainActivity;
 import com.nickilous.alertification.R;
 import com.nickilous.alertification.TextMessage;
-import com.nickilous.alertification.R.drawable;
 import com.nickilous.alertification.network.NetworkThreading;
 
 public class AlertificationService extends Service {
