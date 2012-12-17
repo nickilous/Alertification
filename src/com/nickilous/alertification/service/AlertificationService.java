@@ -25,16 +25,13 @@ public class AlertificationService extends Service {
     private static final boolean D = true;
 
     // Preference Settings
-    private SharedPreferences sharedPref;
-    private boolean serverEnabled = false;
-
-    // designate a port
-    public static final int SERVERPORT = 8080;
+    private SharedPreferences mSharedPref;
+    private boolean bServerEnabled = false;
 
     private static boolean isRunning = false;
 
-    private NetworkThreading alertificationThreading;
-    private BroadcastReceiver smsReceiver;
+    private NetworkThreading mNetworkThreading;
+    private BroadcastReceiver mSmsReceiver;
 
     // Server Members
     private String mServerIP;
@@ -48,11 +45,11 @@ public class AlertificationService extends Service {
 
     @Override
     public void onCreate() {
-        sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
+        mSharedPref = PreferenceManager.getDefaultSharedPreferences(this);
         mContext = getApplicationContext();
         isRunning = true;
         mNotificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-        alertificationThreading = new NetworkThreading(mContext);
+        mNetworkThreading = new NetworkThreading(mContext);
 
         createAndRegisterBroadcastReceiver();
 
@@ -100,23 +97,23 @@ public class AlertificationService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.d(TAG, "Received start id " + startId + ": " + intent);
 
-        serverEnabled = sharedPref.getBoolean(
+        bServerEnabled = mSharedPref.getBoolean(
                 AlertificationPreferenceActivity.SERVER_ENABLED, false);
 
         if (intent.getAction().equals(MainActivity.START_SERVICE)) {
-            if (serverEnabled) {
-                alertificationThreading.start();
+            if (bServerEnabled) {
+                mNetworkThreading.start();
 
             } else {
                 mServerIP = intent.getStringExtra(MainActivity.SERVER_IP);
                 mServerPort = intent.getIntExtra(MainActivity.SERVER_PORT, 0);
                 buildForeGroundNotification("Connected to: " + mServerIP + ":"
                         + mServerPort);
-                alertificationThreading.connect(mServerIP, mServerPort);
+                mNetworkThreading.connect(mServerIP, mServerPort);
 
             }
         } else if (intent.getAction().equals(MainActivity.STOP_SERVICE)) {
-            alertificationThreading.stop();
+            mNetworkThreading.stop();
             stopSelf();
         }
         return START_STICKY;
@@ -133,7 +130,7 @@ public class AlertificationService extends Service {
         super.onDestroy();
         Log.d(TAG, "Service Stopped.");
         // Do not forget to unregister the receiver!!!
-        this.unregisterReceiver(this.smsReceiver);
+        this.unregisterReceiver(this.mSmsReceiver);
         isRunning = false;
     }
 
@@ -145,7 +142,7 @@ public class AlertificationService extends Service {
     private void sendMessageToServer(TextMessage textMessage) {
         Log.d(TAG, "<-----sendMessageToServer()----->");
 
-        alertificationThreading.write(textMessage.toString().getBytes());
+        mNetworkThreading.write(textMessage.toString().getBytes());
 
         Log.d(TAG, "message sent");
 
@@ -156,14 +153,14 @@ public class AlertificationService extends Service {
         theFilter.addAction(TextMessage.TEXT_MESSAGE_RECEIVED);
         theFilter.addAction(TextMessage.SMS_RECEIVED);
 
-        this.smsReceiver = new BroadcastReceiver() {
+        this.mSmsReceiver = new BroadcastReceiver() {
 
             @Override
             public void onReceive(Context context, Intent intent) {
                 // Do whatever you need it to do when it receives the broadcast
                 Log.d(TAG, "SMS Received");
 
-                if (!serverEnabled) {
+                if (!bServerEnabled) {
                     Log.d(TAG, "Message sent to server");
                     TextMessage textMessage = new TextMessage(intent);
                     sendMessageToServer(textMessage);
@@ -178,6 +175,6 @@ public class AlertificationService extends Service {
         };
         // Registers the receiver so that your service will listen for
         // broadcasts
-        this.registerReceiver(this.smsReceiver, theFilter);
+        this.registerReceiver(this.mSmsReceiver, theFilter);
     }
 }

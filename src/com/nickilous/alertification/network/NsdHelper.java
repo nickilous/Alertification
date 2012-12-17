@@ -1,7 +1,5 @@
 package com.nickilous.alertification.network;
 
-import java.net.InetAddress;
-
 import android.annotation.TargetApi;
 import android.content.Context;
 import android.net.nsd.NsdManager;
@@ -129,7 +127,7 @@ public class NsdHelper {
                     // The name of the service tells the user what they'd be
                     // connecting to. It could be "Bob's Chat App".
                     Log.d(TAG, "Same machine: " + mServiceName);
-                } else if (service.getServiceName().contains("NsdChat")) {
+                } else if (service.getServiceName().contains(SERVICE_NAME)) {
                     mNsdManager.resolveService(service, mResolveListener);
                 }
             }
@@ -174,10 +172,14 @@ public class NsdHelper {
                     return;
                 }
                 mService = serviceInfo;
-                int port = mService.getPort();
-                InetAddress host = mService.getHost();
+
             }
         };
+    }
+
+    @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
+    public NsdServiceInfo getChosenServiceInfo() {
+        return mService;
     }
 
     // NsdHelper's tearDown method
