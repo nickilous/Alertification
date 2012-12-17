@@ -11,7 +11,6 @@ public class AlertificationPreferenceActivity extends PreferenceActivity
     public static final String SERVER_ENABLED = "server_enabled";
     public static final String SERVER_IP_ADDRESS = "server_ip_address";
 
-    private boolean wifiDirectEnabled;
     private SharedPreferences sharedPref;
 
     @SuppressWarnings("deprecation")
@@ -37,9 +36,6 @@ public class AlertificationPreferenceActivity extends PreferenceActivity
 
     public void onSharedPreferenceChanged(SharedPreferences sharedPreferences,
             String key) {
-        // if (key.equals("wifi_direct_enabled")) {
-        //
-        // }
 
     }
 

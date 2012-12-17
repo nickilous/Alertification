@@ -1,4 +1,4 @@
-package com.nickilous.alertification;
+package com.nickilous.alertification.service;
 
 import android.app.Notification;
 import android.app.NotificationManager;
@@ -12,6 +12,13 @@ import android.content.SharedPreferences;
 import android.os.IBinder;
 import android.preference.PreferenceManager;
 import android.util.Log;
+
+import com.nickilous.alertification.AlertificationPreferenceActivity;
+import com.nickilous.alertification.MainActivity;
+import com.nickilous.alertification.R;
+import com.nickilous.alertification.TextMessage;
+import com.nickilous.alertification.R.drawable;
+import com.nickilous.alertification.network.NetworkThreading;
 
 public class AlertificationService extends Service {
     // Debugging
@@ -27,7 +34,7 @@ public class AlertificationService extends Service {
 
     private static boolean isRunning = false;
 
-    private AlertificationThreading alertificationThreading;
+    private NetworkThreading alertificationThreading;
     private BroadcastReceiver smsReceiver;
 
     // Server Members
@@ -46,7 +53,7 @@ public class AlertificationService extends Service {
         mContext = getApplicationContext();
         isRunning = true;
         mNotificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-        alertificationThreading = new AlertificationThreading(mContext);
+        alertificationThreading = new NetworkThreading(mContext);
 
         createAndRegisterBroadcastReceiver();
 
@@ -92,7 +99,7 @@ public class AlertificationService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        Log.i(TAG, "Received start id " + startId + ": " + intent);
+        Log.d(TAG, "Received start id " + startId + ": " + intent);
 
         serverEnabled = sharedPref.getBoolean(
                 AlertificationPreferenceActivity.SERVER_ENABLED, false);
@@ -125,7 +132,7 @@ public class AlertificationService extends Service {
     public void onDestroy() {
 
         super.onDestroy();
-        Log.i(TAG, "Service Stopped.");
+        Log.d(TAG, "Service Stopped.");
         // Do not forget to unregister the receiver!!!
         this.unregisterReceiver(this.smsReceiver);
         isRunning = false;
@@ -137,11 +144,11 @@ public class AlertificationService extends Service {
     }
 
     private void sendMessageToServer(TextMessage textMessage) {
-        Log.i(TAG, "<-----sendMessageToServer()----->");
+        Log.d(TAG, "<-----sendMessageToServer()----->");
 
         alertificationThreading.write(textMessage.toString().getBytes());
 
-        Log.i(TAG, "message sent");
+        Log.d(TAG, "message sent");
 
     }
 
@@ -155,14 +162,14 @@ public class AlertificationService extends Service {
             @Override
             public void onReceive(Context context, Intent intent) {
                 // Do whatever you need it to do when it receives the broadcast
-                Log.i(TAG, "SMS Received");
+                Log.d(TAG, "SMS Received");
 
                 if (!serverEnabled) {
-                    Log.i(TAG, "Message sent to server");
+                    Log.d(TAG, "Message sent to server");
                     TextMessage textMessage = new TextMessage(intent);
                     sendMessageToServer(textMessage);
                 } else {
-                    Log.i(TAG, "Message Received from server");
+                    Log.d(TAG, "Message Received from server");
                     TextMessage textMessage = new TextMessage(
                             intent.getStringExtra("textmessage"));
                     buildSMSNotification(textMessage);

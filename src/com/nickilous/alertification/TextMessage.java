@@ -11,18 +11,18 @@ public class TextMessage {
     public static final String TEXT_MESSAGE_RECEIVED = "com.nickilous.TEXT_MESSAGE_RECEIVED";
     public static final String SMS_RECEIVED = "android.provider.Telephony.SMS_RECEIVED";
 
-    TextMessage() {
+    public TextMessage() {
         mSender = null;
         mMessage = null;
     }
 
-    TextMessage(String textMessage) {
+    public TextMessage(String textMessage) {
         String[] textMessageParts = textMessage.split(";");
         mSender = textMessageParts[0];
         mMessage = textMessageParts[1];
     }
 
-    TextMessage(Intent intent) {
+    public TextMessage(Intent intent) {
         // Get the SMS map from Intent
         Bundle extras = intent.getExtras();
 

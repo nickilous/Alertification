@@ -18,6 +18,9 @@ import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.nickilous.alertification.network.NetworkTools;
+import com.nickilous.alertification.service.AlertificationService;
+
 public class MainActivity extends Activity implements
         OnSharedPreferenceChangeListener {
     // Debugging
@@ -46,7 +49,7 @@ public class MainActivity extends Activity implements
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
-        Log.i(TAG, "<-----OnCreate()----->");
+        Log.d(TAG, "<-----OnCreate()----->");
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
@@ -65,7 +68,7 @@ public class MainActivity extends Activity implements
 
     @Override
     public void onResume() {
-        Log.i(TAG, "<-----OnResume()----->");
+        Log.d(TAG, "<-----OnResume()----->");
         super.onResume();
         CheckIfServiceIsRunning();
         sharedPref.registerOnSharedPreferenceChangeListener(this);
@@ -81,14 +84,14 @@ public class MainActivity extends Activity implements
 
     @Override
     public void onPause() {
-        Log.i(TAG, "<-----OnPause()----->");
+        Log.d(TAG, "<-----OnPause()----->");
         super.onPause();
 
     }
 
     @Override
     protected void onDestroy() {
-        Log.i(TAG, "<-----OnDestroy----->");
+        Log.d(TAG, "<-----OnDestroy----->");
         super.onDestroy();
         try {
             doUnbindService();
@@ -133,8 +136,8 @@ public class MainActivity extends Activity implements
         startServerIntent.setAction(START_SERVICE);
         if (serverEnabled) {
             threadStatus.setText("Server is running on IP:PORT: "
-                    + AlertificationThreading.getLocalIpAddress() + ":"
-                    + AlertificationThreading.SERVER_PORT);
+                    + NetworkTools.getLocalIpAddress() + ":"
+                    + NetworkTools.SERVER_PORT);
         } else {
             startServerIntent
                     .putExtra(SERVER_IP, serverIP.getText().toString());
@@ -146,7 +149,7 @@ public class MainActivity extends Activity implements
     }
 
     private void CheckIfServiceIsRunning() {
-        Log.i(TAG, "<-----CheckIfServiceIsRunning()----->");
+        Log.d(TAG, "<-----CheckIfServiceIsRunning()----->");
         // If the service is running when the activity starts, we want to
         // automatically bind to it.
         if (AlertificationService.isRunning()) {
@@ -155,7 +158,7 @@ public class MainActivity extends Activity implements
     }
 
     void doBindService() {
-        Log.i(TAG, "<-----doBindService()----->");
+        Log.d(TAG, "<-----doBindService()----->");
         // Establish a connection with the service. We use an explicit
         // class name because there is no reason to be able to let other
         // applications replace our component.
@@ -166,7 +169,7 @@ public class MainActivity extends Activity implements
     }
 
     void doUnbindService() {
-        Log.i(TAG, "<-----doUnbindService()----->");
+        Log.d(TAG, "<-----doUnbindService()----->");
         if (mIsBound) {
             // If we have received the service, and hence registered with
             // it, then now is the time to unregister.
