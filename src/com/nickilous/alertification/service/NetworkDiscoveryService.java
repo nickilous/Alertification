@@ -25,20 +25,21 @@ public class NetworkDiscoveryService extends Service {
     // Debugging
     private static final String TAG = "NetworkDiscoveryService";
     private static final boolean D = true;
+    private static boolean isRunning;
 
     private Context mContext;
     private NsdHelper mNsdHelper;
     private SharedPreferences mSharedPref;
     private NotificationManager mNotificationManager;
-    private String mServerIP;
-    private int mServerPort;
     private NetworkThreading mNetworkThreading;
 
     private boolean bServerEnabled;
+    private static final int NOTIFICATION_SERVICE_ID = 11;
 
     // Service stop and start commands
-    public static final String START_SERVICE = "START_SERVICE";
-    public static final String STOP_SERVICE = "STOP_SERVICE";
+    public static final String START_LISTEN_SERVICE = "com.nickilous.START_NETWORK_DISCOVERY_LISTEN_SERVICE";
+    public static final String START_DISCOVERY_SERVICE = "com.nickilous.START_NETWORK_DISCOVERY_DISCOVERY_SERVICE";
+    public static final String STOP_SERVICE = "com.nickilous.STOP_NETWORK_DISCOVERY_SERVICE";
 
     public NetworkDiscoveryService() {
         mContext = getApplicationContext();
@@ -57,32 +58,32 @@ public class NetworkDiscoveryService extends Service {
         bServerEnabled = mSharedPref.getBoolean(
                 AlertificationPreferenceActivity.SERVER_ENABLED, false);
 
-        if (intent.getAction().equals(MainActivity.START_SERVICE)) {
-            if (bServerEnabled) {
-                // mNetworkThreading.start();
-                mNsdHelper.registerService(NetworkTools.DEFAULT_SERVER_PORT);
+        if (intent.getAction().equals(START_LISTEN_SERVICE)) {
 
-            } else {
-                boolean discoverying = true;
+            mNsdHelper.registerService(NetworkTools.DEFAULT_SERVER_PORT);
 
-                mNsdHelper.discoverService();
-                do {
-                    NsdServiceInfo service = mNsdHelper.getChosenServiceInfo();
-                    if (service != null) {
-                        Log.d(TAG, "Connecting.");
-                        discoverying = false;
-                        buildForeGroundNotification("Connected to: "
-                                + service.getHost().getHostAddress() + ":"
-                                + service.getPort());
-                        mNetworkThreading.connect(service.getHost()
-                                .getHostAddress(), service.getPort());
-                    } else {
-                        Log.d(TAG, "No service to connect to!");
-                    }
-                } while (discoverying);
+            buildForeGroundNotification("Network Service Started");
 
-            }
-        } else if (intent.getAction().equals(MainActivity.STOP_SERVICE)) {
+        } else if (intent.getAction().equals(START_DISCOVERY_SERVICE)) {
+            boolean discoverying = true;
+
+            mNsdHelper.discoverService();
+            do {
+                NsdServiceInfo service = mNsdHelper.getChosenServiceInfo();
+                if (service != null) {
+                    Log.d(TAG, "Connecting.");
+                    discoverying = false;
+                    buildForeGroundNotification("Connected to: "
+                            + service.getHost().getHostAddress() + ":"
+                            + service.getPort());
+                    mNetworkThreading.connect(service.getHost()
+                            .getHostAddress(), service.getPort());
+                } else {
+                    Log.d(TAG, "No service to connect to!");
+                }
+            } while (discoverying);
+
+        } else if (intent.getAction().equals(STOP_SERVICE)) {
             mNetworkThreading.stop();
             stopSelf();
         }
@@ -101,6 +102,7 @@ public class NetworkDiscoveryService extends Service {
         throw new UnsupportedOperationException("Not yet implemented");
     }
 
+    @SuppressWarnings("deprecation")
     public void buildForeGroundNotification(String contentText) {
         Intent intent = new Intent(getApplicationContext(), MainActivity.class);
 
@@ -120,6 +122,26 @@ public class NetworkDiscoveryService extends Service {
         Notification n = builder.getNotification();
 
         startForeground(NOTIFICATION_SERVICE_ID, n);
+    }
+
+    public static boolean isRunning() {
+        return isRunning;
+
+    }
+
+    static public Intent getStartListenIntent() {
+        Intent intent = new Intent(START_LISTEN_SERVICE);
+        return intent;
+    }
+
+    static public Intent getStartDiscoveryIntent() {
+        Intent intent = new Intent(START_DISCOVERY_SERVICE);
+        return intent;
+    }
+
+    static public Intent getStopIntent() {
+        Intent intent = new Intent(STOP_SERVICE);
+        return intent;
     }
 
 }

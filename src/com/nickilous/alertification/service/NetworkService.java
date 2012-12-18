@@ -19,7 +19,7 @@ import com.nickilous.alertification.R;
 import com.nickilous.alertification.TextMessage;
 import com.nickilous.alertification.network.NetworkThreading;
 
-public class AlertificationService extends Service {
+public class NetworkService extends Service {
     // Debugging
     private static final String TAG = "AlertificationService";
     private static final boolean D = true;
@@ -42,6 +42,13 @@ public class AlertificationService extends Service {
     private NotificationManager mNotificationManager;
     private static final int NOTIFICATION_SERVICE_ID = 1;
     private static final int NOTIFICATION_TEXT_MESSAGE_ID = 2;
+
+    // Static final String Identifiers
+    public static final String START_SERVER_SERVICE = "com.nickilous.START_SERVER_SERVICE";
+    public static final String START_CLIENT_SERVICE = "com.nickilous.START_CLIENT_SERVICE";
+    public static final String STOP_SERVICE = "com.nickilous.STOP_SERVICE";
+    public static final String SERVER_IP = "SERVER_IP";
+    public static final String SERVER_PORT = "SERVER_PORT";
 
     @Override
     public void onCreate() {
@@ -100,19 +107,16 @@ public class AlertificationService extends Service {
         bServerEnabled = mSharedPref.getBoolean(
                 AlertificationPreferenceActivity.SERVER_ENABLED, false);
 
-        if (intent.getAction().equals(MainActivity.START_SERVICE)) {
-            if (bServerEnabled) {
-                mNetworkThreading.start();
-
-            } else {
-                mServerIP = intent.getStringExtra(MainActivity.SERVER_IP);
-                mServerPort = intent.getIntExtra(MainActivity.SERVER_PORT, 0);
-                buildForeGroundNotification("Connected to: " + mServerIP + ":"
-                        + mServerPort);
-                mNetworkThreading.connect(mServerIP, mServerPort);
-
-            }
-        } else if (intent.getAction().equals(MainActivity.STOP_SERVICE)) {
+        if (intent.getAction().equals(START_SERVER_SERVICE)) {
+            mNetworkThreading.start();
+            buildForeGroundNotification("Server On");
+        } else if (intent.getAction().equals(START_CLIENT_SERVICE)) {
+            mServerIP = intent.getStringExtra(SERVER_IP);
+            mServerPort = intent.getIntExtra(SERVER_PORT, 0);
+            buildForeGroundNotification("Connected to: " + mServerIP + ":"
+                    + mServerPort);
+            mNetworkThreading.connect(mServerIP, mServerPort);
+        } else if (intent.getAction().equals(STOP_SERVICE)) {
             mNetworkThreading.stop();
             stopSelf();
         }
@@ -176,5 +180,25 @@ public class AlertificationService extends Service {
         // Registers the receiver so that your service will listen for
         // broadcasts
         this.registerReceiver(this.mSmsReceiver, theFilter);
+    }
+
+    public static Intent getStartServerIntent() {
+        Intent intent = new Intent(START_SERVER_SERVICE);
+        return intent;
+
+    }
+
+    public static Intent getStartClientIntent(String ipAddress,
+            String portNumber) {
+        Intent intent = new Intent(START_CLIENT_SERVICE);
+        intent.putExtra(SERVER_IP, ipAddress);
+        intent.putExtra(SERVER_PORT, Integer.parseInt(portNumber));
+        return intent;
+    }
+
+    public static Intent getStopIntent() {
+        Intent intent = new Intent(STOP_SERVICE);
+        return intent;
+
     }
 }

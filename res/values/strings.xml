@@ -14,5 +14,8 @@
     <string name="service_connection_hint">Service Connection</string>
     <string name="server_ip_text_field_description">Server Ip Address</string>
     <string name="server_port_text_field">Server Port Number</string>
+    <string name="using_network_service_Discovery">Using Network Service Discovery</string>
+    <string name="use_network_service_discovery">Use Network Service Discovery</string>
+    <string name="server_status">Server Status</string>
 
 </resources>

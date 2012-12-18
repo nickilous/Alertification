@@ -35,42 +35,14 @@
     </LinearLayout>
 
     <TextView
-        android:id="@+id/textView2"
+        android:id="@+id/connection_status"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_below="@+id/statusLabel"
-        android:layout_toRightOf="@+id/statusLabel"
-        android:text="@string/service_connection_label"
-        android:textAppearance="?android:attr/textAppearanceLarge"
-        />
-
-    <TextView
-        android:id="@+id/serviceConnectionStatus"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_below="@+id/textView2"
-        android:layout_centerHorizontal="true"
-        android:hint="@string/service_connection_hint"
-        android:textAppearance="?android:attr/textAppearanceMedium" />
-
-    <TextView
-        android:id="@+id/textView3"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_below="@+id/serviceConnectionStatus"
         android:layout_centerHorizontal="true"
         android:layout_marginTop="60dp"
-        android:text="@string/thread_status_label"
+        android:text="@string/server_status"
         android:textAppearance="?android:attr/textAppearanceLarge" />
-
-    <TextView
-        android:id="@+id/threadStatus"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_below="@+id/textView3"
-        android:layout_centerHorizontal="true"
-        android:hint="@string/thread_status"
-        android:textAppearance="?android:attr/textAppearanceMedium" />
 
     <EditText
         android:id="@+id/serverIP"

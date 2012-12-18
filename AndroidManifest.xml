@@ -4,7 +4,7 @@
     android:versionName="1.0" xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-sdk
-        android:minSdkVersion="15"
+        android:minSdkVersion="16"
         android:targetSdkVersion="16" />
 
     <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
@@ -34,20 +34,24 @@
         </activity>
 
         <service
-            android:name="com.nickilous.alertification.service.AlertificationService"
+            android:name=".service.NetworkService"
             android:enabled="true"
-            android:exported="true" >
-
-            <!-- android:process=":remote" -->
+            android:exported="true" 
+            android:process=":server">
             <intent-filter>
                 <action android:name="com.nickilous.START_SERVICE" />
                 <action android:name="com.nickilous.STOP_SERVICE" />
             </intent-filter>
         </service>
         <service
-            android:name="com.nickilous.alertification.NetworkDiscoveryService"
+            android:name=".service.NetworkDiscoveryService"
             android:enabled="true"
-            android:exported="true" >
+            android:exported="true" 
+            android:process=":network_discovery_service">
+            <intent-filter>
+                <action android:name="com.nickilous.START_NETWORK_DISCOVERY_SERVICE" />
+                <action android:name="com.nickilous.STOP_NETWORK_DISCOVERY_SERVICE" />
+            </intent-filter>
         </service>
     </application>
 

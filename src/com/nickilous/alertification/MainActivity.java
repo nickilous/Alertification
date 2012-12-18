@@ -19,7 +19,8 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.nickilous.alertification.network.NetworkTools;
-import com.nickilous.alertification.service.AlertificationService;
+import com.nickilous.alertification.service.NetworkDiscoveryService;
+import com.nickilous.alertification.service.NetworkService;
 
 public class MainActivity extends Activity implements
         OnSharedPreferenceChangeListener {
@@ -27,18 +28,12 @@ public class MainActivity extends Activity implements
     private static final String TAG = "MainActivity";
     private static final boolean D = true;
 
-    // Static final String Identifiers
-    public static final String START_SERVICE = "com.nickilous.START_SERVICE";
-    public static final String STOP_SERVICE = "com.nickilous.STOP_SERVICE";
-    public static final String SERVER_IP = "SERVER_IP";
-    public static final String SERVER_PORT = "SERVER_PORT";
-
     // Service members
     Messenger mService = null;
     boolean mIsBound;
 
     // UI Members
-    private static TextView threadStatus;
+    private static TextView connectionStatus;
     private static TextView serviceConnectionStatus;
     private static TextView serverIP;
     private static TextView serverPort;
@@ -46,6 +41,7 @@ public class MainActivity extends Activity implements
     // Preferences
     private SharedPreferences sharedPref;
     private boolean serverEnabled;
+    private boolean networkDiscoveryEnabled;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -57,10 +53,13 @@ public class MainActivity extends Activity implements
         sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
         serverEnabled = sharedPref.getBoolean(
                 AlertificationPreferenceActivity.SERVER_ENABLED, false);
+        networkDiscoveryEnabled = sharedPref.getBoolean(
+                AlertificationPreferenceActivity.NETWORK_DISCOVERY_ENABLED,
+                false);
 
         // UI Handles
-        threadStatus = (TextView) findViewById(R.id.threadStatus);
-        serviceConnectionStatus = (TextView) findViewById(R.id.serviceConnectionStatus);
+        connectionStatus = (TextView) findViewById(R.id.connection_status);
+
         serverIP = (TextView) findViewById(R.id.serverIP);
         serverPort = (TextView) findViewById(R.id.serverPort);
 
@@ -72,13 +71,7 @@ public class MainActivity extends Activity implements
         super.onResume();
         CheckIfServiceIsRunning();
         sharedPref.registerOnSharedPreferenceChangeListener(this);
-        if (!serverEnabled) {
-            serverIP.setVisibility(View.VISIBLE);
-            serverPort.setVisibility(View.VISIBLE);
-        } else {
-            serverIP.setVisibility(View.INVISIBLE);
-            serverPort.setVisibility(View.INVISIBLE);
-        }
+        checkVisibilityOnUIElements();
 
     }
 
@@ -123,46 +116,54 @@ public class MainActivity extends Activity implements
     public void stopService(View v) {
         Toast.makeText(getApplicationContext(), "Stopping Server",
                 Toast.LENGTH_LONG).show();
-        Intent stopServerIntent = new Intent();
-        stopServerIntent.setAction(STOP_SERVICE);
-        startService(stopServerIntent);
+        startService(NetworkService.getStopIntent());
         doUnbindService();
     }
 
     public void startService(View v) {
         Toast.makeText(getApplicationContext(), "Starting Server",
                 Toast.LENGTH_LONG).show();
-        Intent startServerIntent = new Intent();
-        startServerIntent.setAction(START_SERVICE);
-        if (serverEnabled) {
-            threadStatus.setText("Server is running on IP:PORT: "
+
+        if (serverEnabled && !networkDiscoveryEnabled) {
+            connectionStatus.setText("Server is running on IP:PORT: "
                     + NetworkTools.getLocalIpAddress() + ":"
                     + NetworkTools.DEFAULT_SERVER_PORT);
+            startService(NetworkService.getStartServerIntent());
+            doBindService(NetworkService.class);
         } else {
-            startServerIntent
-                    .putExtra(SERVER_IP, serverIP.getText().toString());
-            startServerIntent.putExtra(SERVER_PORT,
-                    Integer.parseInt(serverPort.getText().toString()));
+            startService(NetworkService.getStartClientIntent(serverIP.getText()
+                    .toString(), serverPort.getText().toString()));
+            doBindService(NetworkService.class);
         }
-        startService(startServerIntent);
-        doBindService();
+
+        if (serverEnabled && networkDiscoveryEnabled) {
+            startService(NetworkDiscoveryService.getStartListenIntent());
+            doBindService(NetworkDiscoveryService.class);
+        }
+        if (!serverEnabled && networkDiscoveryEnabled) {
+            startService(NetworkDiscoveryService.getStartDiscoveryIntent());
+            doBindService(NetworkDiscoveryService.class);
+        }
+
     }
 
     private void CheckIfServiceIsRunning() {
         Log.d(TAG, "<-----CheckIfServiceIsRunning()----->");
         // If the service is running when the activity starts, we want to
         // automatically bind to it.
-        if (AlertificationService.isRunning()) {
-            doBindService();
+        if (NetworkService.isRunning()) {
+            doBindService(NetworkService.class);
+        } else if (NetworkDiscoveryService.isRunning()) {
+            doBindService(NetworkDiscoveryService.class);
         }
     }
 
-    void doBindService() {
+    void doBindService(Class<?> service) {
         Log.d(TAG, "<-----doBindService()----->");
         // Establish a connection with the service. We use an explicit
         // class name because there is no reason to be able to let other
         // applications replace our component.
-        bindService(new Intent(this, AlertificationService.class), mConnection,
+        bindService(new Intent(this, service), mConnection,
                 Context.BIND_AUTO_CREATE);
         mIsBound = true;
         serviceConnectionStatus.setText("Binding.");
@@ -212,19 +213,30 @@ public class MainActivity extends Activity implements
         serviceConnectionStatus.setText(string);
     }
 
+    public void checkVisibilityOnUIElements() {
+        serverEnabled = sharedPref.getBoolean(
+                AlertificationPreferenceActivity.SERVER_ENABLED, false);
+        networkDiscoveryEnabled = sharedPref.getBoolean(
+                AlertificationPreferenceActivity.NETWORK_DISCOVERY_ENABLED,
+                false);
+
+        if (!serverEnabled) {
+            serverIP.setVisibility(View.VISIBLE);
+            serverPort.setVisibility(View.VISIBLE);
+        } else if (networkDiscoveryEnabled) {
+            serverIP.setVisibility(View.INVISIBLE);
+            serverPort.setVisibility(View.INVISIBLE);
+        } else {
+            serverIP.setVisibility(View.INVISIBLE);
+            serverPort.setVisibility(View.INVISIBLE);
+        }
+    }
+
     public void onSharedPreferenceChanged(SharedPreferences sharedPreferences,
             String key) {
-        if (key.equals(AlertificationPreferenceActivity.SERVER_ENABLED)) {
-            serverEnabled = sharedPref.getBoolean(
-                    AlertificationPreferenceActivity.SERVER_ENABLED, false);
-            if (!serverEnabled) {
-                serverIP.setVisibility(View.VISIBLE);
-                serverPort.setVisibility(View.VISIBLE);
-            } else {
-                serverIP.setVisibility(View.INVISIBLE);
-                serverPort.setVisibility(View.INVISIBLE);
-            }
-        }
+
+        checkVisibilityOnUIElements();
+
     }
 
 }
