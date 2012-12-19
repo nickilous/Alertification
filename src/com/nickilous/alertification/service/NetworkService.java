@@ -117,7 +117,7 @@ public class NetworkService extends Service {
                     + mServerPort);
             mNetworkThreading.connect(mServerIP, mServerPort);
         } else if (intent.getAction().equals(STOP_SERVICE)) {
-            mNetworkThreading.stop();
+
             stopSelf();
         }
         return START_STICKY;
@@ -136,6 +136,7 @@ public class NetworkService extends Service {
         // Do not forget to unregister the receiver!!!
         this.unregisterReceiver(this.mSmsReceiver);
         isRunning = false;
+        mNetworkThreading.stop();
     }
 
     public static boolean isRunning() {

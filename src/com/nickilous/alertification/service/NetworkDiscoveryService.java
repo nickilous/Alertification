@@ -5,8 +5,10 @@ import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.net.nsd.NsdServiceInfo;
 import android.os.Build;
@@ -17,6 +19,7 @@ import android.util.Log;
 import com.nickilous.alertification.AlertificationPreferenceActivity;
 import com.nickilous.alertification.MainActivity;
 import com.nickilous.alertification.R;
+import com.nickilous.alertification.TextMessage;
 import com.nickilous.alertification.network.NetworkThreading;
 import com.nickilous.alertification.network.NetworkTools;
 import com.nickilous.alertification.network.NsdHelper;
@@ -34,6 +37,9 @@ public class NetworkDiscoveryService extends Service {
     private NetworkThreading mNetworkThreading;
 
     private boolean bServerEnabled;
+    private IntentFilter theFilter;
+    private BroadcastReceiver mSmsReceiver;
+    private static final int NOTIFICATION_TEXT_MESSAGE_ID = 12;
     private static final int NOTIFICATION_SERVICE_ID = 11;
 
     // Service stop and start commands
@@ -52,7 +58,8 @@ public class NetworkDiscoveryService extends Service {
         mNetworkThreading = new NetworkThreading(mContext);
         mSharedPref = PreferenceManager.getDefaultSharedPreferences(this);
         mNotificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-
+        createAndRegisterBroadcastReceiver();
+        isRunning = true;
     }
 
     @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
@@ -66,6 +73,7 @@ public class NetworkDiscoveryService extends Service {
         if (intent.getAction().equals(START_LISTEN_SERVICE)) {
 
             mNsdHelper.registerService(NetworkTools.DEFAULT_SERVER_PORT);
+            mNetworkThreading.start();
 
             buildForeGroundNotification("Network Service Started");
 
@@ -73,23 +81,23 @@ public class NetworkDiscoveryService extends Service {
             boolean discoverying = true;
 
             mNsdHelper.discoverService();
-            // do {
-            NsdServiceInfo service = mNsdHelper.getChosenServiceInfo();
-            if (service != null) {
-                Log.d(TAG, "Connecting.");
-                discoverying = false;
-                buildForeGroundNotification("Connected to: "
-                        + service.getHost().getHostAddress() + ":"
-                        + service.getPort());
-                mNetworkThreading.connect(service.getHost().getHostAddress(),
-                        service.getPort());
-            } else {
-                Log.d(TAG, "No service to connect to!");
-            }
-            // } while (discoverying);
+            do {
+                NsdServiceInfo service = mNsdHelper.getChosenServiceInfo();
+                if (service != null) {
+                    Log.d(TAG, "Connecting.");
+                    discoverying = false;
+                    buildForeGroundNotification("Connected to: "
+                            + service.getHost().getHostAddress() + ":"
+                            + service.getPort());
+                    mNetworkThreading.connect(service.getHost()
+                            .getHostAddress(), service.getPort());
+                } else {
+                    Log.d(TAG, "No service to connect to!");
+                }
+            } while (discoverying);
 
         } else if (intent.getAction().equals(STOP_SERVICE)) {
-            mNetworkThreading.stop();
+
             stopSelf();
         }
         return START_STICKY;
@@ -97,8 +105,14 @@ public class NetworkDiscoveryService extends Service {
 
     @Override
     public void onDestroy() {
-        mNsdHelper.tearDown();
         super.onDestroy();
+        mNsdHelper.tearDown();
+        Log.d(TAG, "Service Stopped.");
+        // Do not forget to unregister the receiver!!!
+        this.unregisterReceiver(this.mSmsReceiver);
+        isRunning = false;
+        mNetworkThreading.stop();
+
     }
 
     @Override
@@ -131,6 +145,62 @@ public class NetworkDiscoveryService extends Service {
 
     public static boolean isRunning() {
         return isRunning;
+
+    }
+
+    private void createAndRegisterBroadcastReceiver() {
+        theFilter = new IntentFilter();
+        theFilter.addAction(TextMessage.TEXT_MESSAGE_RECEIVED);
+        theFilter.addAction(TextMessage.SMS_RECEIVED);
+
+        this.mSmsReceiver = new BroadcastReceiver() {
+
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                // Do whatever you need it to do when it receives the broadcast
+                Log.d(TAG, "SMS Received");
+
+                if (!bServerEnabled) {
+                    Log.d(TAG, "Message sent to server");
+                    TextMessage textMessage = new TextMessage(intent);
+                    sendMessageToServer(textMessage);
+                } else {
+                    Log.d(TAG, "Message Received from server");
+                    TextMessage textMessage = new TextMessage(
+                            intent.getStringExtra("textmessage"));
+                    buildSMSNotification(textMessage);
+                }
+
+            }
+        };
+        // Registers the receiver so that your service will listen for
+        // broadcasts
+        this.registerReceiver(this.mSmsReceiver, theFilter);
+    }
+
+    private void sendMessageToServer(TextMessage textMessage) {
+        Log.d(TAG, "<-----sendMessageToServer()----->");
+
+        mNetworkThreading.write(textMessage.toString().getBytes());
+
+        Log.d(TAG, "message sent");
+
+    }
+
+    public void buildSMSNotification(TextMessage textMessage) {
+        Notification.Builder builder = new Notification.Builder(
+                getApplicationContext());
+
+        builder.setSmallIcon(R.drawable.ic_launcher)
+                .setWhen(System.currentTimeMillis())
+                .setAutoCancel(true)
+                .setContentTitle("Text Message Received")
+                .setContentText(
+                        "Sender: " + textMessage.getSender() + " Message: "
+                                + textMessage.getMessage());
+
+        Notification n = builder.getNotification();
+        mNotificationManager.notify(NOTIFICATION_TEXT_MESSAGE_ID, n);
 
     }
 

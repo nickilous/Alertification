@@ -69,7 +69,7 @@ public class MainActivity extends Activity implements
     public void onResume() {
         Log.d(TAG, "<-----OnResume()----->");
         super.onResume();
-        CheckIfServiceIsRunning();
+        // CheckIfServiceIsRunning();
         sharedPref.registerOnSharedPreferenceChangeListener(this);
         checkVisibilityOnUIElements();
 
@@ -116,7 +116,12 @@ public class MainActivity extends Activity implements
     public void stopService(View v) {
         Toast.makeText(getApplicationContext(), "Stopping Server",
                 Toast.LENGTH_LONG).show();
-        startService(NetworkService.getStopIntent());
+        if (NetworkService.isRunning()) {
+            startService(NetworkService.getStopIntent());
+        } else if (NetworkDiscoveryService.isRunning()) {
+            startService(NetworkDiscoveryService.getStopIntent());
+        }
+
         // doUnbindService();
     }
 
@@ -224,13 +229,16 @@ public class MainActivity extends Activity implements
         if (!serverEnabled) {
             serverIP.setVisibility(View.VISIBLE);
             serverPort.setVisibility(View.VISIBLE);
-        } else if (networkDiscoveryEnabled) {
-            serverIP.setVisibility(View.INVISIBLE);
-            serverPort.setVisibility(View.INVISIBLE);
-        } else {
+        }
+        if (networkDiscoveryEnabled) {
             serverIP.setVisibility(View.INVISIBLE);
             serverPort.setVisibility(View.INVISIBLE);
         }
+        if (!serverEnabled && !networkDiscoveryEnabled) {
+            serverIP.setVisibility(View.VISIBLE);
+            serverPort.setVisibility(View.VISIBLE);
+        }
+
     }
 
     public void onSharedPreferenceChanged(SharedPreferences sharedPreferences,

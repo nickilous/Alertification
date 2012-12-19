@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest package="com.nickilous.alertification"
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.nickilous.alertification"
     android:versionCode="1"
-    android:versionName="1.0" xmlns:android="http://schemas.android.com/apk/res/android">
+    android:versionName="1.0" >
 
     <uses-sdk
         android:minSdkVersion="16"
@@ -34,10 +35,10 @@
         </activity>
 
         <service
-            android:name=".service.NetworkService"
+            android:name="com.nickilous.alertification.service.NetworkService"
             android:enabled="true"
-            android:exported="true" 
-            android:process=":server">
+            android:exported="true"
+            android:process=":server" >
             <intent-filter>
                 <action android:name="com.nickilous.START_SERVER_SERVICE" />
                 <action android:name="com.nickilous.START_CLIENT_SERVICE" />
@@ -45,16 +46,19 @@
             </intent-filter>
         </service>
         <service
-            android:name=".service.NetworkDiscoveryService"
+            android:name="com.nickilous.alertification.service.NetworkDiscoveryService"
             android:enabled="true"
             android:exported="true" >
+
             <!-- android:process=":network_discovery_service" -->
             <intent-filter>
                 <action android:name="com.nickilous.START_NETWORK_DISCOVERY_LISTEN_SERVICE" />
-                <action android:name="com.nickilous.START_NETWORK_DISCOVERY_DISCOVERY_SERVICE"/>
+                <action android:name="com.nickilous.START_NETWORK_DISCOVERY_DISCOVERY_SERVICE" />
                 <action android:name="com.nickilous.STOP_NETWORK_DISCOVERY_SERVICE" />
             </intent-filter>
         </service>
+
+        
     </application>
 
 </manifest>

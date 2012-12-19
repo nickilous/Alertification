@@ -25,6 +25,8 @@ public class NsdHelper {
     private RegistrationListener mRegistrationListener;
     private DiscoveryListener mDiscoveryListener;
     private ResolveListener mResolveListener;
+    private boolean bListening = false;
+    private boolean bDiscoverying = false;
 
     public static final String SERVICE_NAME = "AlertificationTextService";
     public static final String SERVICE_TYPE = "_http._tcp.";
@@ -39,8 +41,6 @@ public class NsdHelper {
 
     public void initializeNsd() {
         initializeResolveListener();
-        initializeDiscoveryListener();
-        initializeRegistrationListener();
 
         // mNsdManager.init(mContext.getMainLooper(), this);
 
@@ -54,6 +54,8 @@ public class NsdHelper {
     @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
     public void registerService(int port) {
         // Create the NsdServiceInfo object, and populate it.
+        bListening = true;
+        initializeRegistrationListener();
         NsdServiceInfo serviceInfo = new NsdServiceInfo();
 
         // The name is subject to change based on conflicts
@@ -68,8 +70,11 @@ public class NsdHelper {
 
     @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
     public void discoverService() {
+        bDiscoverying = true;
+        initializeDiscoveryListener();
         mNsdManager.discoverServices(SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD,
                 mDiscoveryListener);
+
     }
 
     @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
@@ -114,6 +119,7 @@ public class NsdHelper {
             // Called as soon as service discovery begins.
             public void onDiscoveryStarted(String regType) {
                 Log.d(TAG, "Service discovery started");
+
             }
 
             public void onServiceFound(NsdServiceInfo service) {
@@ -129,6 +135,7 @@ public class NsdHelper {
                     // connecting to. It could be "Bob's Chat App".
                     Log.d(TAG, "Same machine: " + mServiceName);
                 } else if (service.getServiceName().contains(SERVICE_NAME)) {
+
                     mNsdManager.resolveService(service, mResolveListener);
                 }
             }
@@ -172,6 +179,7 @@ public class NsdHelper {
                     Log.d(TAG, "Same IP.");
                     return;
                 }
+
                 mService = serviceInfo;
 
             }
@@ -186,7 +194,11 @@ public class NsdHelper {
     // NsdHelper's tearDown method
     @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
     public void tearDown() {
-        mNsdManager.unregisterService(mRegistrationListener);
-        mNsdManager.stopServiceDiscovery(mDiscoveryListener);
+        if (bListening) {
+            mNsdManager.unregisterService(mRegistrationListener);
+        }
+        if (bDiscoverying) {
+            mNsdManager.stopServiceDiscovery(mDiscoveryListener);
+        }
     }
 }
