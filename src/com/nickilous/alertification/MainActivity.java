@@ -87,7 +87,7 @@ public class MainActivity extends Activity implements
         Log.d(TAG, "<-----OnDestroy----->");
         super.onDestroy();
         try {
-            doUnbindService();
+            // doUnbindService();
         } catch (Throwable t) {
             Log.e(TAG, "Failed to unbind from the service", t);
         }
@@ -117,7 +117,7 @@ public class MainActivity extends Activity implements
         Toast.makeText(getApplicationContext(), "Stopping Server",
                 Toast.LENGTH_LONG).show();
         startService(NetworkService.getStopIntent());
-        doUnbindService();
+        // doUnbindService();
     }
 
     public void startService(View v) {
@@ -129,20 +129,21 @@ public class MainActivity extends Activity implements
                     + NetworkTools.getLocalIpAddress() + ":"
                     + NetworkTools.DEFAULT_SERVER_PORT);
             startService(NetworkService.getStartServerIntent());
-            doBindService(NetworkService.class);
-        } else {
+            // doBindService(NetworkService.class);
+        }
+        if (!serverEnabled && !networkDiscoveryEnabled) {
             startService(NetworkService.getStartClientIntent(serverIP.getText()
                     .toString(), serverPort.getText().toString()));
-            doBindService(NetworkService.class);
+            // doBindService(NetworkService.class);
         }
 
         if (serverEnabled && networkDiscoveryEnabled) {
             startService(NetworkDiscoveryService.getStartListenIntent());
-            doBindService(NetworkDiscoveryService.class);
+            // doBindService(NetworkDiscoveryService.class);
         }
         if (!serverEnabled && networkDiscoveryEnabled) {
             startService(NetworkDiscoveryService.getStartDiscoveryIntent());
-            doBindService(NetworkDiscoveryService.class);
+            // doBindService(NetworkDiscoveryService.class);
         }
 
     }
@@ -166,7 +167,7 @@ public class MainActivity extends Activity implements
         bindService(new Intent(this, service), mConnection,
                 Context.BIND_AUTO_CREATE);
         mIsBound = true;
-        serviceConnectionStatus.setText("Binding.");
+        // serviceConnectionStatus.setText("Binding.");
     }
 
     void doUnbindService() {

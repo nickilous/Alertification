@@ -42,6 +42,11 @@ public class NetworkDiscoveryService extends Service {
     public static final String STOP_SERVICE = "com.nickilous.STOP_NETWORK_DISCOVERY_SERVICE";
 
     public NetworkDiscoveryService() {
+
+    }
+
+    @Override
+    public void onCreate() {
         mContext = getApplicationContext();
         mNsdHelper = new NsdHelper(mContext);
         mNetworkThreading = new NetworkThreading(mContext);
@@ -68,20 +73,20 @@ public class NetworkDiscoveryService extends Service {
             boolean discoverying = true;
 
             mNsdHelper.discoverService();
-            do {
-                NsdServiceInfo service = mNsdHelper.getChosenServiceInfo();
-                if (service != null) {
-                    Log.d(TAG, "Connecting.");
-                    discoverying = false;
-                    buildForeGroundNotification("Connected to: "
-                            + service.getHost().getHostAddress() + ":"
-                            + service.getPort());
-                    mNetworkThreading.connect(service.getHost()
-                            .getHostAddress(), service.getPort());
-                } else {
-                    Log.d(TAG, "No service to connect to!");
-                }
-            } while (discoverying);
+            // do {
+            NsdServiceInfo service = mNsdHelper.getChosenServiceInfo();
+            if (service != null) {
+                Log.d(TAG, "Connecting.");
+                discoverying = false;
+                buildForeGroundNotification("Connected to: "
+                        + service.getHost().getHostAddress() + ":"
+                        + service.getPort());
+                mNetworkThreading.connect(service.getHost().getHostAddress(),
+                        service.getPort());
+            } else {
+                Log.d(TAG, "No service to connect to!");
+            }
+            // } while (discoverying);
 
         } else if (intent.getAction().equals(STOP_SERVICE)) {
             mNetworkThreading.stop();

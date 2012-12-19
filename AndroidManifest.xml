@@ -39,17 +39,19 @@
             android:exported="true" 
             android:process=":server">
             <intent-filter>
-                <action android:name="com.nickilous.START_SERVICE" />
+                <action android:name="com.nickilous.START_SERVER_SERVICE" />
+                <action android:name="com.nickilous.START_CLIENT_SERVICE" />
                 <action android:name="com.nickilous.STOP_SERVICE" />
             </intent-filter>
         </service>
         <service
             android:name=".service.NetworkDiscoveryService"
             android:enabled="true"
-            android:exported="true" 
-            android:process=":network_discovery_service">
+            android:exported="true" >
+            <!-- android:process=":network_discovery_service" -->
             <intent-filter>
-                <action android:name="com.nickilous.START_NETWORK_DISCOVERY_SERVICE" />
+                <action android:name="com.nickilous.START_NETWORK_DISCOVERY_LISTEN_SERVICE" />
+                <action android:name="com.nickilous.START_NETWORK_DISCOVERY_DISCOVERY_SERVICE"/>
                 <action android:name="com.nickilous.STOP_NETWORK_DISCOVERY_SERVICE" />
             </intent-filter>
         </service>

@@ -34,6 +34,7 @@ public class NsdHelper {
         mContext = context;
         mNsdManager = (NsdManager) mContext
                 .getSystemService(Context.NSD_SERVICE);
+        initializeNsd();
     }
 
     public void initializeNsd() {
