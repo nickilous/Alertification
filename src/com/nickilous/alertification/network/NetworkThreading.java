@@ -376,6 +376,7 @@ public class NetworkThreading {
         private final Socket mmSocket;
         private final InputStream mmInStream;
         private final OutputStream mmOutStream;
+        private boolean stopThread = false;
 
         public ConnectedThread(Socket socket) {
             Log.d(TAG, "create ConnectedThread");
@@ -402,7 +403,7 @@ public class NetworkThreading {
             int bytes;
 
             // Keep listening to the InputStream while connected
-            while (true) {
+            while (!stopThread) {
                 try {
                     // Read from the InputStream
                     bytes = mmInStream.read(buffer);
@@ -436,6 +437,7 @@ public class NetworkThreading {
 
         public void cancel() {
             try {
+                stopThread = true;
                 mmSocket.close();
             } catch (IOException e) {
                 Log.e(TAG, "close() of connect socket failed", e);
